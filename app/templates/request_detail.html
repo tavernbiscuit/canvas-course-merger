@@ -1,4 +1,18 @@
 {% extends "base.html" %}
+{% macro destination_form(group, accounts, button_label, include_prompt=false) %}
+  <form method="post" action="/groups/{{ group.id }}/destination" class="compact-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>Destination subaccount
+      <select name="destination_account_id" required>
+        {% if include_prompt %}<option value="">Choose an approved Canvas account</option>{% endif %}
+        {% for account in accounts %}
+          <option value="{{ account.id }}" {% if account.id == group.destination_account_id %}selected{% endif %}>{{ account.name }} ({{ account.id }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="button">{{ button_label }}</button>
+  </form>
+{% endmacro %}
 {% block title %}{{ merge_request.external_reference }}{% endblock %}
 {% block content %}
   <div class="page-heading">
@@ -16,31 +30,48 @@
     <section class="card group-card">
       <div class="group-heading">
         <div>
-          <p class="eyebrow">Destination course group: {{ group.group_key }}</p>
+          <p class="eyebrow">Destination course {{ loop.index }}</p>
           <h2>{{ group.destination_name or "Destination pending" }}</h2>
         </div>
         <span class="status {{ group.status }}">{{ group.status|replace("_", " ") }}</span>
       </div>
-      {% if group.blocking_reason %}<div class="notice error">{{ group.blocking_reason }}</div>{% endif %}
+      {% if group.blocking_reason %}<div class="notice {% if group.status == 'needs_destination' %}warning{% else %}error{% endif %}">{{ group.blocking_reason }}</div>{% endif %}
       <dl class="metadata">
         <div><dt>Course code</dt><dd>{{ group.destination_course_code or "—" }}</dd></div>
         <div><dt>Term</dt><dd>{{ group.enrollment_term_name or "—" }}</dd></div>
         <div><dt>Subaccount</dt><dd>{{ group.destination_account_name or group.destination_account_id or "Selection required" }}</dd></div>
         <div><dt>Canvas destination</dt><dd>{{ group.destination_course_id or "Not created" }}</dd></div>
       </dl>
-      {% if group.status == "needs_destination" or (group.status == "blocked" and accounts) %}
-        <form method="post" action="/groups/{{ group.id }}/destination" class="compact-form">
-          <input type="hidden" name="csrf" value="{{ csrf_token }}">
-          <label>Destination subaccount
-            <select name="destination_account_id" required>
-              <option value="">Choose an approved Canvas account</option>
-              {% for account in accounts %}
-                <option value="{{ account.id }}" {% if account.id == group.destination_account_id %}selected{% endif %}>{{ account.name }} ({{ account.id }})</option>
-              {% endfor %}
-            </select>
-          </label>
-          <button class="button">Select and revalidate</button>
-        </form>
+      {% if group.status == "needs_destination" %}
+        {{ destination_form(group, accounts, "Select and revalidate", true) }}
+      {% endif %}
+      {% if group.status == "ready" and accounts %}
+        <details class="destination-change">
+          <summary>Change destination subaccount</summary>
+          <p>The shared source subaccount was selected automatically. Change it only when the approved request requires another destination.</p>
+          {{ destination_form(group, accounts, "Change and revalidate") }}
+        </details>
+      {% endif %}
+      {% if group.status == "blocked" and not group.destination_course_id %}
+        <div class="notice warning">
+          <p>No destination Canvas course was created.</p>
+          {% if group.destination_account_id %}
+            <p>The selected destination subaccount is preserved. Revalidate the current Canvas state before confirming another execution attempt.</p>
+          {% else %}
+            <p>Resolve the validation message above, then revalidate the current Canvas state.</p>
+          {% endif %}
+          <form method="post" action="/requests/{{ merge_request.id }}/validate">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <button class="button">Revalidate Canvas state</button>
+          </form>
+          {% if accounts %}
+            <details>
+              <summary>Change destination subaccount</summary>
+              <p>Changing the destination triggers live validation and requires a new confirmation.</p>
+              {{ destination_form(group, accounts, "Change and revalidate") }}
+            </details>
+          {% endif %}
+        </div>
       {% endif %}
       <table>
         <thead><tr><th>SIS section ID</th><th>Source account</th><th>Status</th><th>Result</th></tr></thead>

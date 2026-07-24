@@ -326,10 +326,13 @@ class ValidationService:
             for item in group.items:
                 if item.status == ItemStatus.ELIGIBLE.value:
                     item.status = ItemStatus.BLOCKED.value
-                    item.reason = (
-                        "The entire destination course group is blocked because "
-                        "another section is ineligible"
-                    )
+                    if group.status == GroupStatus.NEEDS_DESTINATION.value:
+                        item.reason = "Waiting for an approved destination subaccount selection"
+                    else:
+                        item.reason = (
+                            "The entire destination course group is blocked because "
+                            "another section is ineligible"
+                        )
         else:
             group.status = GroupStatus.READY.value
 

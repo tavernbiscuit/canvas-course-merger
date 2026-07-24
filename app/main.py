@@ -11,11 +11,9 @@ from typing import Annotated
 from fastapi import (
     Depends,
     FastAPI,
-    File,
     Form,
     HTTPException,
     Request,
-    UploadFile,
     status,
 )
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -30,7 +28,7 @@ from app.config import Settings, get_settings
 from app.database import Base, engine, get_db
 from app.domain import DomainValidationError
 from app.execution import queue_group
-from app.intake import IntakeError, parse_manual, parse_upload
+from app.intake import IntakeError, parse_destination_groups, parse_upload
 from app.models import (
     AdminUser,
     AuditEvent,
@@ -144,6 +142,42 @@ def canvas_for_admin(
 ) -> CanvasClient:
     token = OAuthService(app_settings).access_token(admin.credential, db)
     return CanvasClient(app_settings, token)
+
+
+def account_choices(admin: AdminUser, db: Session) -> list[dict[str, object]]:
+    with canvas_for_admin(admin, db) as canvas:
+        account_map = ValidationService(settings, canvas).allowed_accounts()
+    return sorted(account_map.values(), key=lambda item: str(item.get("name", "")))
+
+
+def destination_group_values(form: object | None = None) -> list[dict[str, object]]:
+    if form is None or not hasattr(form, "getlist"):
+        return [
+            {
+                "index": "0",
+                "source_sis_ids": ["", ""],
+            }
+        ]
+    indexes = [
+        str(value).strip()
+        for value in form.getlist("group_index")  # type: ignore[attr-defined]
+        if str(value).strip().isdigit()
+    ]
+    values: list[dict[str, object]] = []
+    for position, index in enumerate(dict.fromkeys(indexes)):
+        sis_ids = [
+            str(value)
+            for value in form.getlist(  # type: ignore[attr-defined]
+                f"source_sis_id_{index}"
+            )
+        ]
+        values.append(
+            {
+                "index": str(position),
+                "source_sis_ids": sis_ids or ["", ""],
+            }
+        )
+    return values or destination_group_values()
 
 
 @app.exception_handler(status.HTTP_401_UNAUTHORIZED)
@@ -294,30 +328,40 @@ def request_list(
 
 
 @app.get("/requests/new", response_class=HTMLResponse)
-def request_new(request: Request, _: AdminUser = Depends(current_admin)):
-    return templates.TemplateResponse(request, "request_new.html", context(request))
+def request_new(
+    request: Request,
+    _: AdminUser = Depends(current_admin),
+):
+    return templates.TemplateResponse(
+        request,
+        "request_new.html",
+        context(
+            request,
+            form_groups=destination_group_values(),
+        ),
+    )
 
 
 @app.post("/requests")
 async def request_create(
     request: Request,
-    faculty_identity: Annotated[str, Form()],
-    external_reference: Annotated[str, Form()],
-    manual_rows: Annotated[str, Form()] = "",
-    upload: UploadFile | None = File(default=None),
-    csrf: Annotated[str, Form()] = "",
     admin: AdminUser = Depends(current_admin),
     db: Session = Depends(get_db),
 ):
-    verify_csrf(request, csrf)
+    form = await request.form()
+    faculty_identity = str(form.get("faculty_identity") or "")
+    external_reference = str(form.get("external_reference") or "")
+    verify_csrf(request, str(form.get("csrf") or ""))
+    form_groups = destination_group_values(form)
     try:
-        if upload and upload.filename:
+        upload = form.get("upload")
+        if upload and getattr(upload, "filename", ""):
             content_bytes = await upload.read(5 * 1024 * 1024 + 1)
             if len(content_bytes) > 5 * 1024 * 1024:
                 raise IntakeError("Uploads are limited to 5 MB")
             rows = parse_upload(upload.filename, content_bytes)
         else:
-            rows = parse_manual(manual_rows)
+            rows = parse_destination_groups(form)
         merge_request = create_request(
             db,
             admin=admin,
@@ -339,7 +383,7 @@ async def request_create(
                 error=str(exc),
                 faculty_identity=faculty_identity,
                 external_reference=external_reference,
-                manual_rows=manual_rows,
+                form_groups=form_groups,
             ),
             status_code=422,
         )
@@ -348,9 +392,9 @@ async def request_create(
 @app.get("/intake-template.csv")
 def intake_template(_: AdminUser = Depends(current_admin)):
     return PlainTextResponse(
-        "merge_group_key,source_sis_id,destination_subaccount\n"
-        "destination-clj-eng-101,2026.fall.clj.101.12345,\n"
-        "destination-clj-eng-101,2026.fall.eng.101.23456,\n",
+        "merge_group_key,source_sis_id\n"
+        "destination-clj-eng-101,2026.fall.clj.101.12345\n"
+        "destination-clj-eng-101,2026.fall.eng.101.23456\n",
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="canvas-merge-intake.csv"'},
     )
@@ -366,11 +410,8 @@ def request_detail(
     merge_request = load_request(db, request_id)
     if not merge_request:
         raise HTTPException(status_code=404)
-    accounts: list[dict[str, object]] = []
     try:
-        with canvas_for_admin(admin, db) as canvas:
-            account_map = ValidationService(settings, canvas).allowed_accounts()
-            accounts = sorted(account_map.values(), key=lambda item: str(item.get("name", "")))
+        accounts = account_choices(admin, db)
     except CanvasError as exc:
         flash(request, f"Canvas account choices are unavailable: {exc}", "error")
     return templates.TemplateResponse(

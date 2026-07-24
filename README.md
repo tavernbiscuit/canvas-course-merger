@@ -87,11 +87,12 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) and select **Sign in with
 Canvas**. In local-demo mode, the simulator signs you in automatically as
 `Local Canvas Admin`.
 
-Create a request with any example faculty identity and reference, then enter:
+Create a request with any example faculty identity and reference. Under
+**Destination course 1**, enter these two source SIS section IDs:
 
 ```text
-destination-clj-101, 2026.fall.clj.101.12345
-destination-clj-101, 2026.fall.clj.101.34567
+2026.fall.clj.101.12345
+2026.fall.clj.101.34567
 ```
 
 The application will propose:
@@ -107,79 +108,78 @@ Type the generated course name into the confirmation field, queue the merge,
 and refresh the request page after the worker processes it.
 
 To try a cross-department and cross-subaccount merge, restart the simulator and
-use:
+use these two section IDs in one destination course:
 
 ```text
-destination-clj-eng-101, 2026.fall.clj.101.12345
-destination-clj-eng-101, 2026.fall.eng.101.23456
+2026.fall.clj.101.12345
+2026.fall.eng.101.23456
 ```
 
-The review screen will require a preferred destination subaccount and will
-generate the course code `CLJ/ENG 101`.
+The review screen will require a preferred destination subaccount because the
+source sections span subaccounts. It will generate the course code
+`CLJ/ENG 101`.
 
-## How does `merge_group_key` map to Canvas?
+## Entering merge requests
 
-Think of `merge_group_key` as the **destination course group**. It is a
-temporary label that answers this question:
+Structured entry is the primary workflow. Each **Destination course** card
+represents one new blank and unpublished Canvas course:
 
-> Which source Canvas sections should be cross-listed into the same new
-> destination Canvas course?
+1. Add at least two source SIS section IDs to the card.
+2. Use **Add another destination course** when one faculty request contains
+   multiple separate merges.
+3. Save the request so the application can resolve and validate the sections in
+   Canvas.
+4. If the source sections span subaccounts, select one destination subaccount
+   on the review screen and revalidate.
 
-Give every source section that belongs in the same destination course the same
-key. The application validates those sections together, creates one blank and
-unpublished Canvas destination course, and cross-lists every eligible section
-in that group into it.
+The application generates an internal group key for structured entries; admins
+do not enter or manage that key.
 
-- Rows with the **same** key are cross-listed into **one** new destination
-  course.
-- Rows with **different** keys are cross-listed into **different** new
-  destination courses.
-- Each destination course group must contain at least two distinct Canvas
-  sections.
-- The key is not looked up in Canvas and is never sent to Canvas.
-- It does not become the Canvas course name, course code, SIS ID, course ID, or
-  section ID.
-- It only needs to distinguish destination courses within the current intake
-  request; a later request may reuse it.
+Subaccount selection is validation-driven and intentionally conservative:
 
-For example, this spreadsheet provisions two new Canvas destination courses:
+- If every source section belongs to one approved Canvas subaccount, that
+  subaccount becomes the destination automatically. No dropdown is shown during
+  intake.
+- If source sections span subaccounts, the application requires an explicit
+  group-level destination selection on the review screen.
+- The application does not silently choose the first section's subaccount for a
+  mixed-subaccount merge.
+- After validation, **Change destination subaccount** remains available as an
+  optional review-screen control for an approved exception.
 
-| `merge_group_key` (destination course group) | Source Canvas SIS section ID | Canvas result |
-| --- | --- | --- |
-| `destination-clj-101` | `2026.fall.clj.101.12345` | Cross-list into destination A |
-| `destination-clj-101` | `2026.fall.clj.101.34567` | Cross-list into destination A |
-| `destination-eng-101-102` | `2026.fall.eng.101.23456` | Cross-list into destination B |
-| `destination-eng-101-102` | `2026.fall.eng.102.45678` | Cross-list into destination B |
+Subaccounts are not maintained in the application. When a choice is required,
+the dropdown is populated from the Canvas accounts that the signed-in
+administrator can manage. `CANVAS_ALLOWED_ACCOUNT_IDS` may optionally restrict
+that list.
 
-The value is for the admin's reference, so use something recognizable such as
-`destination-clj-eng-101`, `ticket-482-destination-a`, or
-`nursing-all-sections`. The application derives the real Canvas course name
-and course code from the source SIS IDs—not from this label.
+## Optional bulk import
 
-## Intake formats
-
-Administrators may enter rows manually or upload CSV/XLSX files.
+CSV and XLSX upload remains available under **Bulk import** for unusually large
+requests. New files need only two columns:
 
 | Column | Required | Description |
 | --- | --- | --- |
-| `merge_group_key` | Yes | Destination course group. Use the same value for every source section that should be cross-listed into one new Canvas destination course. |
+| `merge_group_key` | Yes | Temporary file-local label. Rows with the same value are cross-listed into one new Canvas destination course. |
 | `source_sis_id` | Yes | Source Canvas SIS section ID in the form `year.season.abbreviation.number.crn`. |
-| `destination_subaccount` | Conditional | Preferred Canvas destination subaccount ID when source sections span subaccounts. |
 
-Example CSV:
+Example:
 
 ```csv
-merge_group_key,source_sis_id,destination_subaccount
-destination-clj-101,2026.fall.clj.101.12345,
-destination-clj-101,2026.fall.clj.101.34567,
-destination-clj-eng-101,2026.fall.clj.101.67890,10
-destination-clj-eng-101,2026.fall.eng.101.78901,10
+merge_group_key,source_sis_id
+destination-clj-101,2026.fall.clj.101.12345
+destination-clj-101,2026.fall.clj.101.34567
+destination-clj-eng-101,2026.fall.clj.101.67890
+destination-clj-eng-101,2026.fall.eng.101.78901
 ```
 
-Leaving `destination_subaccount` blank is normal. If all source sections share
-one approved subaccount, the application selects it automatically. If the
-sections span subaccounts, the review screen asks the administrator to choose
-from the Canvas accounts they can manage.
+`merge_group_key` is never sent to Canvas and does not become a course name,
+course code, SIS ID, Canvas course ID, or section ID. It only associates rows
+within that uploaded file.
+
+The previous optional `destination_subaccount` column is still accepted for
+backward compatibility, but new files should omit it. Common source
+subaccounts are assigned automatically, and mixed-subaccount destinations are
+chosen once per destination on the review screen.
 
 ## Automated tests
 

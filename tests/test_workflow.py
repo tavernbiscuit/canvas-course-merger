@@ -67,6 +67,10 @@ def test_mixed_accounts_requires_destination(db):
     assert not service.validate_request(db, request)
     group = request.groups[0]
     assert group.status == GroupStatus.NEEDS_DESTINATION.value
+    assert all(
+        item.reason == "Waiting for an approved destination subaccount selection"
+        for item in group.items
+    )
 
     set_destination_account(db, group=group, account_id=20, admin_id=request.admin_id)
     assert service.validate_group(db, group, admin_id=request.admin_id)

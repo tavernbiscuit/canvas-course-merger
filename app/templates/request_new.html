@@ -5,7 +5,7 @@
     <div><p class="eyebrow">Verified faculty request</p><h1>New merge request</h1></div>
   </div>
   {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
-  <form method="post" action="/requests" enctype="multipart/form-data" class="stack">
+  <form method="post" action="/requests" enctype="multipart/form-data" class="stack" data-intake-form>
     <input type="hidden" name="csrf" value="{{ csrf_token }}">
     <section class="card form-grid">
       <label>Faculty name or institutional email
@@ -15,20 +15,79 @@
         <input name="external_reference" required maxlength="255" value="{{ external_reference or '' }}">
       </label>
     </section>
-    <section class="card">
-      <h2>Canvas destination course groups</h2>
-      <p class="hint">Each row represents one source Canvas section. Give every section that should be cross-listed into the same new destination course the same destination course group.</p>
-      <p class="hint">Enter each row as <code>destination course group, source SIS section ID, optional destination Canvas subaccount ID</code>.</p>
-      <textarea name="manual_rows" rows="10" placeholder="destination-clj-eng-101, 2026.fall.clj.101.12345&#10;destination-clj-eng-101, 2026.fall.eng.101.23456">{{ manual_rows or '' }}</textarea>
-      <div class="divider"><span>or upload</span></div>
+
+    <fieldset class="intake-fieldset" data-structured-intake>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Canvas destinations</p>
+          <h2>Courses to create</h2>
+          <p>Each card represents one new blank Canvas destination course. Add every SIS-backed section that should be cross-listed into that destination.</p>
+        </div>
+      </div>
+      <div class="destination-groups" data-destination-groups data-next-group-index="{{ form_groups|length }}">
+        {% for group in form_groups %}
+          <article class="card destination-intake-card" data-destination-group data-group-index="{{ group.index }}">
+            <div class="group-heading">
+              <div>
+                <p class="eyebrow" data-group-number>Destination course {{ loop.index }}</p>
+                <h3>Source Canvas sections</h3>
+              </div>
+              <button type="button" class="button quiet" data-remove-group>Remove destination</button>
+            </div>
+            <input type="hidden" name="group_index" value="{{ group.index }}">
+            <div class="section-inputs" data-section-inputs>
+              {% for sis_id in group.source_sis_ids %}
+                <div class="section-input" data-section-input>
+                  <label><span data-section-number>Source SIS section ID {{ loop.index }}</span>
+                    <input name="source_sis_id_{{ group.index }}" required maxlength="255" autocomplete="off" value="{{ sis_id }}" placeholder="2026.fall.clj.101.12345">
+                  </label>
+                  <button type="button" class="button quiet" data-remove-section>Remove</button>
+                </div>
+              {% endfor %}
+            </div>
+            <button type="button" class="button" data-add-section>Add another section</button>
+          </article>
+        {% endfor %}
+      </div>
+      <button type="button" class="button" data-add-group>Add another destination course</button>
+    </fieldset>
+
+    <details class="card bulk-import">
+      <summary>Bulk import from CSV or XLSX</summary>
+      <p>Use this for requests containing many destination courses. Selecting a file replaces the destination-course cards above for this submission.</p>
       <label>CSV or XLSX file
-        <input type="file" name="upload" accept=".csv,.xlsx">
+        <input id="bulk-upload" type="file" name="upload" accept=".csv,.xlsx" data-bulk-upload>
       </label>
-      <p class="hint"><a href="/intake-template.csv">Download the CSV template</a>. In an uploaded file, the destination course group column is named <code>merge_group_key</code>. Uploads are limited to 5 MB.</p>
-    </section>
+      <p class="hint"><a href="/intake-template.csv">Download the two-column CSV template</a>. Uploads are limited to 5 MB. Destination subaccounts are assigned automatically when all source sections match; mixed-subaccount destinations are selected after validation.</p>
+    </details>
+
     <div class="actions">
       <a class="button" href="/requests">Cancel</a>
       <button class="button primary">Save and validate</button>
     </div>
   </form>
+
+  <template id="destination-group-template">
+    <article class="card destination-intake-card" data-destination-group>
+      <div class="group-heading">
+        <div>
+          <p class="eyebrow" data-group-number>Destination course</p>
+          <h3>Source Canvas sections</h3>
+        </div>
+        <button type="button" class="button quiet" data-remove-group>Remove destination</button>
+      </div>
+      <input type="hidden" name="group_index">
+      <div class="section-inputs" data-section-inputs></div>
+      <button type="button" class="button" data-add-section>Add another section</button>
+    </article>
+  </template>
+
+  <template id="section-input-template">
+    <div class="section-input" data-section-input>
+      <label><span data-section-number>Source SIS section ID</span>
+        <input required maxlength="255" autocomplete="off" placeholder="2026.fall.clj.101.12345">
+      </label>
+      <button type="button" class="button quiet" data-remove-section>Remove</button>
+    </div>
+  </template>
 {% endblock %}

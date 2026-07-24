@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openpyxl import load_workbook
+from starlette.datastructures import FormData
 
 REQUIRED_COLUMNS = {"merge_group_key", "source_sis_id"}
+MAX_DESTINATION_GROUPS = 50
+MAX_SECTIONS_PER_GROUP = 100
 
 
 class IntakeError(ValueError):
@@ -19,6 +22,36 @@ class IntakeRow:
     merge_group_key: str
     source_sis_id: str
     destination_subaccount: int | None = None
+
+
+def parse_destination_groups(form: FormData) -> list[IntakeRow]:
+    indexes = [str(value).strip() for value in form.getlist("group_index")]
+    if not indexes:
+        raise IntakeError("Add at least one destination course")
+    if len(indexes) > MAX_DESTINATION_GROUPS:
+        raise IntakeError(f"An intake may contain at most {MAX_DESTINATION_GROUPS} destinations")
+    if len(set(indexes)) != len(indexes) or any(not value.isdigit() for value in indexes):
+        raise IntakeError("The destination course form is invalid; reload and try again")
+
+    rows: list[IntakeRow] = []
+    for position, index in enumerate(indexes, start=1):
+        sis_ids = [
+            str(value).strip()
+            for value in form.getlist(f"source_sis_id_{index}")
+            if str(value).strip()
+        ]
+        if len(sis_ids) < 2:
+            raise IntakeError(
+                f"Destination course {position} requires at least two source Canvas sections"
+            )
+        if len(sis_ids) > MAX_SECTIONS_PER_GROUP:
+            raise IntakeError(
+                f"Destination course {position} may contain at most "
+                f"{MAX_SECTIONS_PER_GROUP} sections"
+            )
+        group_key = f"destination-{position}"
+        rows.extend(IntakeRow(group_key, sis_id) for sis_id in sis_ids)
+    return rows
 
 
 def _normalize_rows(rows: list[dict[str, object]]) -> list[IntakeRow]:
@@ -76,22 +109,3 @@ def parse_upload(filename: str, content: bytes) -> list[IntakeRow]:
     if suffix == ".xlsx":
         return parse_xlsx(content)
     raise IntakeError("Upload a .csv or .xlsx file")
-
-
-def parse_manual(text: str) -> list[IntakeRow]:
-    rows: list[IntakeRow] = []
-    for number, raw_line in enumerate(text.splitlines(), start=1):
-        line = raw_line.strip()
-        if not line:
-            continue
-        parts = [part.strip() for part in line.split(",")]
-        if len(parts) not in (2, 3):
-            raise IntakeError(
-                f"Manual row {number} must be destination course group, "
-                "source SIS section ID, and optional destination Canvas subaccount ID"
-            )
-        account_id = int(parts[2]) if len(parts) == 3 and parts[2] else None
-        rows.append(IntakeRow(parts[0], parts[1], account_id))
-    if not rows:
-        raise IntakeError("Enter at least one section row or upload a file")
-    return rows
