@@ -16,7 +16,7 @@
     <section class="card group-card">
       <div class="group-heading">
         <div>
-          <p class="eyebrow">Merge group {{ group.group_key }}</p>
+          <p class="eyebrow">Destination course group: {{ group.group_key }}</p>
           <h2>{{ group.destination_name or "Destination pending" }}</h2>
         </div>
         <span class="status {{ group.status }}">{{ group.status|replace("_", " ") }}</span>
@@ -75,7 +75,7 @@
         </form>
       {% endif %}
       {% if group.status in ["queued", "executing"] %}
-        <p class="hint">The background worker is processing this group. Refresh for the latest result.</p>
+        <p class="hint">The background worker is processing this destination course group. Refresh for the latest result.</p>
       {% endif %}
       {% if group.status == "creation_unknown" %}
         <div class="notice warning">Canvas may have created the shell, but the response was not received. Reconcile this manually before any retry.</div>

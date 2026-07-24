@@ -9,7 +9,10 @@
   </head>
   <body>
     <header class="site-header">
-      <a href="/requests" class="brand">Canvas Course Merger</a>
+      <div class="brand-row">
+        <a href="/requests" class="brand">Canvas Course Merger</a>
+        {% if local_canvas_demo %}<span class="demo-badge">Local demo</span>{% endif %}
+      </div>
       {% if current_admin %}
         <nav>
           <a href="/requests">Requests</a>

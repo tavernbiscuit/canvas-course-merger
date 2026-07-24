@@ -87,7 +87,8 @@ def parse_manual(text: str) -> list[IntakeRow]:
         parts = [part.strip() for part in line.split(",")]
         if len(parts) not in (2, 3):
             raise IntakeError(
-                f"Manual row {number} must be group key, SIS ID, and optional account ID"
+                f"Manual row {number} must be destination course group, "
+                "source SIS section ID, and optional destination Canvas subaccount ID"
             )
         account_id = int(parts[2]) if len(parts) == 3 and parts[2] else None
         rows.append(IntakeRow(parts[0], parts[1], account_id))

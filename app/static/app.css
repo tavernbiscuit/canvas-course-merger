@@ -21,6 +21,8 @@ a { color: var(--blue); }
   background: #10283d; color: #fff;
 }
 .brand { color: #fff; font-weight: 750; text-decoration: none; letter-spacing: -.02em; }
+.brand-row { display: flex; align-items: center; gap: .75rem; }
+.demo-badge { padding: .2rem .48rem; border-radius: 999px; background: #f4ca64; color: #3b2a00; font-size: .68rem; font-weight: 850; text-transform: uppercase; letter-spacing: .06em; }
 nav { display: flex; align-items: center; gap: 1.25rem; font-size: .9rem; }
 nav a, .link-button { color: #fff; text-decoration: none; }
 main { width: min(1180px, 92vw); margin: 2.5rem auto 5rem; }

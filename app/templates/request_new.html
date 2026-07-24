@@ -16,14 +16,15 @@
       </label>
     </section>
     <section class="card">
-      <h2>Sections</h2>
-      <p class="hint">Enter one row as <code>group key, SIS ID, optional destination Canvas account ID</code>.</p>
-      <textarea name="manual_rows" rows="10" placeholder="group-1, 2026.fall.clj.101.12345&#10;group-1, 2026.fall.eng.101.23456">{{ manual_rows or '' }}</textarea>
+      <h2>Canvas destination course groups</h2>
+      <p class="hint">Each row represents one source Canvas section. Give every section that should be cross-listed into the same new destination course the same destination course group.</p>
+      <p class="hint">Enter each row as <code>destination course group, source SIS section ID, optional destination Canvas subaccount ID</code>.</p>
+      <textarea name="manual_rows" rows="10" placeholder="destination-clj-eng-101, 2026.fall.clj.101.12345&#10;destination-clj-eng-101, 2026.fall.eng.101.23456">{{ manual_rows or '' }}</textarea>
       <div class="divider"><span>or upload</span></div>
       <label>CSV or XLSX file
         <input type="file" name="upload" accept=".csv,.xlsx">
       </label>
-      <p class="hint"><a href="/intake-template.csv">Download the CSV template</a>. Uploads are limited to 5 MB.</p>
+      <p class="hint"><a href="/intake-template.csv">Download the CSV template</a>. In an uploaded file, the destination course group column is named <code>merge_group_key</code>. Uploads are limited to 5 MB.</p>
     </section>
     <div class="actions">
       <a class="button" href="/requests">Cancel</a>

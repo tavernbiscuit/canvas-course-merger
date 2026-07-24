@@ -118,6 +118,7 @@ def context(request: Request, **values: object) -> dict[str, object]:
         "current_admin": getattr(request.state, "admin", None),
         "csrf_token": csrf_token(request),
         "flash": request.session.pop("_flash", None),
+        "local_canvas_demo": settings.local_canvas_demo,
         **values,
     }
 
@@ -348,8 +349,8 @@ async def request_create(
 def intake_template(_: AdminUser = Depends(current_admin)):
     return PlainTextResponse(
         "merge_group_key,source_sis_id,destination_subaccount\n"
-        "group-1,2026.fall.clj.101.12345,\n"
-        "group-1,2026.fall.eng.101.23456,\n",
+        "destination-clj-eng-101,2026.fall.clj.101.12345,\n"
+        "destination-clj-eng-101,2026.fall.eng.101.23456,\n",
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="canvas-merge-intake.csv"'},
     )
@@ -457,7 +458,7 @@ def execute_group(
     else:
         try:
             queue_group(db, group=group, admin=admin)
-            flash(request, "Merge group queued for execution.")
+            flash(request, "Destination course group queued for execution.")
         except ValueError as exc:
             db.rollback()
             flash(request, str(exc), "error")

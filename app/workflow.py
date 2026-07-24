@@ -84,14 +84,17 @@ def create_request(
             group.destination_account_id = next(iter(requested_accounts))
         elif len(requested_accounts) > 1:
             group.status = GroupStatus.BLOCKED.value
-            group.blocking_reason = "A merge group may request only one destination subaccount"
+            group.blocking_reason = (
+                "A destination course group may specify only one Canvas destination subaccount"
+            )
         request.groups.append(group)
         seen: set[str] = set()
         for row in group_rows:
             normalized = row.source_sis_id.strip().lower()
             if normalized in seen:
                 raise DomainValidationError(
-                    f"Duplicate SIS ID {row.source_sis_id} in group {group_key}"
+                    f"Duplicate source SIS section ID {row.source_sis_id} "
+                    f"in destination course group {group_key}"
                 )
             seen.add(normalized)
             group.items.append(MergeItem(source_sis_id=row.source_sis_id.strip()))
@@ -174,7 +177,9 @@ class ValidationService:
                 blocking_reasons.append(f"{item.source_sis_id}: {exc}")
 
         if len(group.items) < 2:
-            blocking_reasons.append("A merge group requires at least two distinct sections")
+            blocking_reasons.append(
+                "A destination course group requires at least two distinct Canvas sections"
+            )
 
         allowed_accounts: dict[int, dict[str, Any]] = {}
         try:
@@ -321,7 +326,10 @@ class ValidationService:
             for item in group.items:
                 if item.status == ItemStatus.ELIGIBLE.value:
                     item.status = ItemStatus.BLOCKED.value
-                    item.reason = "The merge group is blocked as a whole"
+                    item.reason = (
+                        "The entire destination course group is blocked because "
+                        "another section is ineligible"
+                    )
         else:
             group.status = GroupStatus.READY.value
 

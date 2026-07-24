@@ -5,6 +5,11 @@ import hashlib
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def _csv_ints(value: str) -> frozenset[int]:
@@ -39,6 +44,11 @@ class Settings:
     @property
     def secure_cookies(self) -> bool:
         return self.app_base_url.lower().startswith("https://")
+
+    @property
+    def local_canvas_demo(self) -> bool:
+        hostname = urlparse(self.canvas_base_url).hostname
+        return self.app_env == "development" and hostname in {"127.0.0.1", "localhost"}
 
     def validate_for_server(self) -> None:
         if self.app_env != "development":

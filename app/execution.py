@@ -31,7 +31,7 @@ def queue_group(
     retry_failed_only: bool = False,
 ) -> ExecutionJob:
     if group.status in (GroupStatus.QUEUED.value, GroupStatus.EXECUTING.value):
-        raise ValueError("This merge group already has an active execution job")
+        raise ValueError("This destination course group already has an active execution job")
     if retry_failed_only:
         if group.destination_course_id is None:
             raise ValueError("A retry requires an existing destination course")
@@ -39,10 +39,10 @@ def queue_group(
             item.status in (ItemStatus.FAILED_RETRYABLE.value, ItemStatus.FAILED_FINAL.value)
             for item in group.items
         ):
-            raise ValueError("This group has no failed sections to retry")
+            raise ValueError("This destination course group has no failed Canvas sections to retry")
     else:
         if group.status != GroupStatus.READY.value:
-            raise ValueError("Only a fully validated group can be executed")
+            raise ValueError("Only a fully validated destination course group can be executed")
         if not group.validation_hash:
             raise ValueError("The validation snapshot is missing")
         group.confirmed_hash = group.validation_hash
