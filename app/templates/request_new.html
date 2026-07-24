@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}New merge request{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div><p class="eyebrow">Verified faculty request</p><h1>New merge request</h1></div>
+  </div>
+  {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+  <form method="post" action="/requests" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <section class="card form-grid">
+      <label>Faculty name or institutional email
+        <input name="faculty_identity" required maxlength="320" value="{{ faculty_identity or '' }}">
+      </label>
+      <label>External request or ticket reference
+        <input name="external_reference" required maxlength="255" value="{{ external_reference or '' }}">
+      </label>
+    </section>
+    <section class="card">
+      <h2>Sections</h2>
+      <p class="hint">Enter one row as <code>group key, SIS ID, optional destination Canvas account ID</code>.</p>
+      <textarea name="manual_rows" rows="10" placeholder="group-1, 2026.fall.clj.101.12345&#10;group-1, 2026.fall.eng.101.23456">{{ manual_rows or '' }}</textarea>
+      <div class="divider"><span>or upload</span></div>
+      <label>CSV or XLSX file
+        <input type="file" name="upload" accept=".csv,.xlsx">
+      </label>
+      <p class="hint"><a href="/intake-template.csv">Download the CSV template</a>. Uploads are limited to 5 MB.</p>
+    </section>
+    <div class="actions">
+      <a class="button" href="/requests">Cancel</a>
+      <button class="button primary">Save and validate</button>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ merge_request.external_reference }}{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Request {{ merge_request.id }}</p>
+      <h1>{{ merge_request.external_reference }}</h1>
+      <p>Faculty: {{ merge_request.faculty_identity }} · Entered by {{ merge_request.admin.name }}</p>
+    </div>
+    <form method="post" action="/requests/{{ merge_request.id }}/validate">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <button class="button">Run live validation</button>
+    </form>
+  </div>
+  {% for group in merge_request.groups %}
+    <section class="card group-card">
+      <div class="group-heading">
+        <div>
+          <p class="eyebrow">Merge group {{ group.group_key }}</p>
+          <h2>{{ group.destination_name or "Destination pending" }}</h2>
+        </div>
+        <span class="status {{ group.status }}">{{ group.status|replace("_", " ") }}</span>
+      </div>
+      {% if group.blocking_reason %}<div class="notice error">{{ group.blocking_reason }}</div>{% endif %}
+      <dl class="metadata">
+        <div><dt>Course code</dt><dd>{{ group.destination_course_code or "—" }}</dd></div>
+        <div><dt>Term</dt><dd>{{ group.enrollment_term_name or "—" }}</dd></div>
+        <div><dt>Subaccount</dt><dd>{{ group.destination_account_name or group.destination_account_id or "Selection required" }}</dd></div>
+        <div><dt>Canvas destination</dt><dd>{{ group.destination_course_id or "Not created" }}</dd></div>
+      </dl>
+      {% if group.status == "needs_destination" or (group.status == "blocked" and accounts) %}
+        <form method="post" action="/groups/{{ group.id }}/destination" class="compact-form">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <label>Destination subaccount
+            <select name="destination_account_id" required>
+              <option value="">Choose an approved Canvas account</option>
+              {% for account in accounts %}
+                <option value="{{ account.id }}" {% if account.id == group.destination_account_id %}selected{% endif %}>{{ account.name }} ({{ account.id }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button class="button">Select and revalidate</button>
+        </form>
+      {% endif %}
+      <table>
+        <thead><tr><th>SIS section ID</th><th>Source account</th><th>Status</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for item in group.items %}
+            <tr>
+              <td><code>{{ item.source_sis_id }}</code></td>
+              <td>{{ item.source_account_name or item.source_account_id or "—" }}</td>
+              <td><span class="status {{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
+              <td>{{ item.reason or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if group.status == "ready" %}
+        <div class="confirmation">
+          <h3>Confirm destination creation</h3>
+          <p>This creates an unpublished, blank Canvas course without a SIS ID, then moves every listed section into it.</p>
+          <form method="post" action="/groups/{{ group.id }}/execute" class="compact-form" data-confirm="Create the destination and queue this merge?">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <label>Type <strong>{{ group.destination_name }}</strong> to confirm
+              <input name="confirm_name" required autocomplete="off">
+            </label>
+            <button class="button danger">Confirm and queue merge</button>
+          </form>
+        </div>
+      {% endif %}
+      {% if group.status == "completed_with_exceptions" and group.destination_course_id %}
+        <form method="post" action="/groups/{{ group.id }}/retry" data-confirm="Reconcile and retry failed sections?">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <button class="button">Retry failed sections</button>
+        </form>
+      {% endif %}
+      {% if group.status in ["queued", "executing"] %}
+        <p class="hint">The background worker is processing this group. Refresh for the latest result.</p>
+      {% endif %}
+      {% if group.status == "creation_unknown" %}
+        <div class="notice warning">Canvas may have created the shell, but the response was not received. Reconcile this manually before any retry.</div>
+      {% endif %}
+    </section>
+  {% endfor %}
+{% endblock %}

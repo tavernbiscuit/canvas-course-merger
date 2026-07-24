@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Canvas Course Merger{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="/requests" class="brand">Canvas Course Merger</a>
+      {% if current_admin %}
+        <nav>
+          <a href="/requests">Requests</a>
+          <a href="/audit">Audit</a>
+          <span>{{ current_admin.name }}</span>
+          <form method="post" action="/auth/logout" class="inline">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <button class="link-button">Sign out</button>
+          </form>
+        </nav>
+      {% endif %}
+    </header>
+    <main>
+      {% if flash %}
+        <div class="notice {{ flash.level }}">{{ flash.message }}</div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
