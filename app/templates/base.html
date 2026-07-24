@@ -8,28 +8,56 @@
     <script src="{{ url_for('static', path='/app.js') }}" defer></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
-      <div class="brand-row">
-        <a href="/requests" class="brand">Canvas Course Merger</a>
-        {% if local_canvas_demo %}<span class="demo-badge">Local demo</span>{% endif %}
+      <div class="institution-bar">
+        <div class="header-inner institution-inner">
+          <div class="university-signature" aria-label="University of Illinois Chicago">
+            <span class="signature-rule" aria-hidden="true"></span>
+            <span class="signature-copy">
+              <strong>University of Illinois Chicago</strong>
+              <span>Learning Technology Solutions</span>
+            </span>
+          </div>
+          <span class="internal-tool">Administrative tool</span>
+        </div>
       </div>
-      {% if current_admin %}
-        <nav>
-          <a href="/requests">Requests</a>
-          <a href="/audit">Audit</a>
-          <span>{{ current_admin.name }}</span>
-          <form method="post" action="/auth/logout" class="inline">
-            <input type="hidden" name="csrf" value="{{ csrf_token }}">
-            <button class="link-button">Sign out</button>
-          </form>
-        </nav>
-      {% endif %}
+      <div class="product-bar">
+        <div class="header-inner product-inner">
+          <div class="product-identity">
+            <a href="/requests" class="product-name">Canvas Course Merger</a>
+            {% if local_canvas_demo %}<span class="demo-badge">Local demo</span>{% endif %}
+          </div>
+          {% if current_admin %}
+            <nav class="app-nav" aria-label="Application">
+              <a href="/requests" {% if request.url.path.startswith("/requests") %}class="active" aria-current="page"{% endif %}>Requests</a>
+              <a href="/audit" {% if request.url.path.startswith("/audit") %}class="active" aria-current="page"{% endif %}>Audit log</a>
+              <span class="admin-chip">
+                <span class="admin-initial" aria-hidden="true">{{ current_admin.name[:1]|upper }}</span>
+                <span>{{ current_admin.name }}</span>
+              </span>
+              <form method="post" action="/auth/logout" class="inline">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <button class="link-button">Sign out</button>
+              </form>
+            </nav>
+          {% endif %}
+        </div>
+      </div>
     </header>
-    <main>
+    <main id="main-content">
       {% if flash %}
-        <div class="notice {{ flash.level }}">{{ flash.message }}</div>
+        <div class="notice {{ flash.level }}" role="status" data-dismissible>
+          <span>{{ flash.message }}</span>
+          <button type="button" class="notice-dismiss" aria-label="Dismiss message" data-dismiss-notice>×</button>
+        </div>
       {% endif %}
       {% block content %}{% endblock %}
     </main>
+    <footer class="site-footer">
+      <span>Learning Technology Solutions</span>
+      <span aria-hidden="true">·</span>
+      <span>University of Illinois Chicago</span>
+    </footer>
   </body>
 </html>

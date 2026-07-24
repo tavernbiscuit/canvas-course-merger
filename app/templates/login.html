@@ -1,10 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Sign in · Canvas Course Merger{% endblock %}
 {% block content %}
-  <section class="hero">
-    <p class="eyebrow">Administrative operations</p>
-    <h1>Safe, auditable Canvas course merges</h1>
-    <p>Create a blank destination shell, validate every SIS-backed section, and cross-list only after a final live check.</p>
-    <a class="button primary" href="/auth/login">Sign in with Canvas</a>
+  <section class="auth-layout">
+    <div class="auth-intro">
+      <p class="eyebrow light">Learning Technology Solutions</p>
+      <h1>Canvas course merges, handled with confidence.</h1>
+      <p>Create a blank destination shell, validate every SIS-backed section, and cross-list only after a final live check.</p>
+      <div class="dot-field" aria-hidden="true"></div>
+    </div>
+    <div class="auth-card">
+      <p class="eyebrow">Administrative access</p>
+      <h2>Sign in to continue</h2>
+      <p>Use your Canvas administrator account. Your identity is recorded with validation and execution activity.</p>
+      <a class="button primary full-width" href="/auth/login">Sign in with Canvas</a>
+      <p class="auth-help">Faculty merge requests must be approved through the existing institutional process before entry.</p>
+    </div>
   </section>
 {% endblock %}

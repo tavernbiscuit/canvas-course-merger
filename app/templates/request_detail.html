@@ -15,33 +15,121 @@
 {% endmacro %}
 {% block title %}{{ merge_request.external_reference }}{% endblock %}
 {% block content %}
+  {% set validation = namespace(available=false) %}
+  {% for group in merge_request.groups %}
+    {% if group.status in ["draft", "needs_destination", "blocked", "ready"] %}
+      {% set validation.available = true %}
+    {% endif %}
+  {% endfor %}
   <div class="page-heading">
     <div>
-      <p class="eyebrow">Request {{ merge_request.id }}</p>
+      <p class="breadcrumb"><a href="/requests">Merge requests</a><span aria-hidden="true">/</span> Request {{ merge_request.id }}</p>
       <h1>{{ merge_request.external_reference }}</h1>
-      <p>Faculty: {{ merge_request.faculty_identity }} · Entered by {{ merge_request.admin.name }}</p>
+      <p class="page-summary">Faculty: {{ merge_request.faculty_identity }} · Entered by {{ merge_request.admin.name }}</p>
     </div>
-    <form method="post" action="/requests/{{ merge_request.id }}/validate">
-      <input type="hidden" name="csrf" value="{{ csrf_token }}">
-      <button class="button">Run live validation</button>
-    </form>
+    {% if validation.available %}
+      <div class="validation-action">
+        <form method="post" action="/requests/{{ merge_request.id }}/validate">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <button class="button">Recheck current Canvas state</button>
+        </form>
+        <p>Refreshes eligibility, permissions, terms, and destination details. Creates nothing.</p>
+      </div>
+    {% elif merge_request.status in ["queued", "executing"] %}
+      <div class="validation-action">
+        <p>The worker performs the final live safety check automatically before creating anything.</p>
+      </div>
+    {% endif %}
   </div>
+  <div data-request-progress data-progress-url="/api/requests/{{ merge_request.id }}/progress">
   {% for group in merge_request.groups %}
+    {% set latest_job = (group.jobs|sort(attribute="id", reverse=true)|first) if group.jobs else none %}
+    {% set display_status = "executing" if latest_job and latest_job.status == "running" else group.status %}
     <section class="card group-card">
       <div class="group-heading">
         <div>
           <p class="eyebrow">Destination course {{ loop.index }}</p>
           <h2>{{ group.destination_name or "Destination pending" }}</h2>
         </div>
-        <span class="status {{ group.status }}">{{ group.status|replace("_", " ") }}</span>
+        <span class="status {{ display_status }}" data-group-status>{{ display_status|replace("_", " ") }}</span>
       </div>
       {% if group.blocking_reason %}<div class="notice {% if group.status == 'needs_destination' %}warning{% else %}error{% endif %}">{{ group.blocking_reason }}</div>{% endif %}
       <dl class="metadata">
         <div><dt>Course code</dt><dd>{{ group.destination_course_code or "—" }}</dd></div>
         <div><dt>Term</dt><dd>{{ group.enrollment_term_name or "—" }}</dd></div>
         <div><dt>Subaccount</dt><dd>{{ group.destination_account_name or group.destination_account_id or "Selection required" }}</dd></div>
-        <div><dt>Canvas destination</dt><dd>{{ group.destination_course_id or "Not created" }}</dd></div>
+        <div><dt>Canvas destination</dt><dd data-destination-id>{{ group.destination_course_id or "Not created" }}</dd></div>
       </dl>
+      {% if group.jobs %}
+        <section
+          class="execution-tracker {{ group.status }}"
+          data-execution-tracker
+          data-group-id="{{ group.id }}"
+          data-initial-status="{{ group.status }}"
+          data-tone="{% if group.status == 'completed' %}success{% elif group.status == 'completed_with_exceptions' %}warning{% elif latest_job.status == 'failed' %}error{% else %}active{% endif %}"
+          aria-live="polite"
+        >
+          <div class="tracker-heading">
+            <div>
+              <p class="eyebrow">Execution progress</p>
+              <h3 data-progress-title>
+                {% if latest_job.status == "pending" %}
+                  Queued for execution
+                {% elif latest_job.status == "running" and not group.destination_course_id and group.status == "creation_unknown" %}
+                  Creating the blank destination course
+                {% elif latest_job.status == "running" %}
+                  Processing Canvas merge
+                {% elif group.status == "completed" %}
+                  Merge completed
+                {% elif group.status == "completed_with_exceptions" %}
+                  Completed with exceptions
+                {% elif group.status == "creation_unknown" %}
+                  Administrator reconciliation required
+                {% else %}
+                  Execution stopped
+                {% endif %}
+              </h3>
+            </div>
+            <span
+              class="live-state"
+              data-live-state
+              data-state="{% if latest_job.status in ['pending', 'running'] %}live{% elif latest_job.status == 'failed' %}error{% else %}final{% endif %}"
+            >
+              <span class="live-dot" aria-hidden="true"></span>
+              <span data-live-label>
+                {% if latest_job.status in ["pending", "running"] %}Live{% else %}Final{% endif %}
+              </span>
+            </span>
+          </div>
+          <progress
+            class="progress-bar"
+            data-progress-bar
+            max="100"
+            value="{% if latest_job.status == 'pending' %}5{% elif latest_job.status == 'running' and not group.destination_course_id %}32{% elif latest_job.status == 'running' %}50{% elif latest_job.status in ['succeeded', 'failed'] %}100{% else %}0{% endif %}"
+          >Execution progress</progress>
+          <ol class="progress-steps" aria-label="Execution steps">
+            <li class="active" data-progress-step="queued"><span aria-hidden="true">1</span>Queued</li>
+            <li class="waiting" data-progress-step="preflight"><span aria-hidden="true">2</span>Live safety check</li>
+            <li class="waiting" data-progress-step="destination"><span aria-hidden="true">3</span>Create destination</li>
+            <li class="waiting" data-progress-step="sections"><span aria-hidden="true">4</span>Cross-list sections</li>
+            <li class="waiting" data-progress-step="complete"><span aria-hidden="true">5</span>Complete</li>
+          </ol>
+          <p class="tracker-detail" data-progress-detail>
+            {% if latest_job.status == "pending" %}
+              Waiting for the execution worker to start automatically.
+            {% elif latest_job.status == "running" %}
+              The worker is processing this destination and will update this page automatically.
+            {% elif group.status == "completed" %}
+              Every section was cross-listed successfully.
+            {% elif group.status == "completed_with_exceptions" %}
+              Review the section results below for failures that can be retried.
+            {% else %}
+              Review the execution result and section details below.
+            {% endif %}
+          </p>
+          <p class="tracker-updated" data-progress-updated>Checking for the latest update…</p>
+        </section>
+      {% endif %}
       {% if group.status == "needs_destination" %}
         {{ destination_form(group, accounts, "Select and revalidate", true) }}
       {% endif %}
@@ -73,19 +161,22 @@
           {% endif %}
         </div>
       {% endif %}
-      <table>
-        <thead><tr><th>SIS section ID</th><th>Source account</th><th>Status</th><th>Result</th></tr></thead>
-        <tbody>
-          {% for item in group.items %}
-            <tr>
-              <td><code>{{ item.source_sis_id }}</code></td>
-              <td>{{ item.source_account_name or item.source_account_id or "—" }}</td>
-              <td><span class="status {{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
-              <td>{{ item.reason or "—" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-shell inset-table">
+        <table>
+          <caption class="sr-only">Source sections for destination course {{ loop.index }}</caption>
+          <thead><tr><th>SIS section ID</th><th>Source account</th><th>Status</th><th>Result</th></tr></thead>
+          <tbody>
+            {% for item in group.items %}
+              <tr data-progress-item="{{ item.id }}">
+                <td><code>{{ item.source_sis_id }}</code></td>
+                <td>{{ item.source_account_name or item.source_account_id or "—" }}</td>
+                <td><span class="status {{ item.status }}" data-item-status>{{ item.status|replace("_", " ") }}</span></td>
+                <td data-item-reason>{{ item.reason or "—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% if group.status == "ready" %}
         <div class="confirmation">
           <h3>Confirm destination creation</h3>
@@ -105,12 +196,10 @@
           <button class="button">Retry failed sections</button>
         </form>
       {% endif %}
-      {% if group.status in ["queued", "executing"] %}
-        <p class="hint">The background worker is processing this destination course group. Refresh for the latest result.</p>
-      {% endif %}
-      {% if group.status == "creation_unknown" %}
+      {% if group.status == "creation_unknown" and (not latest_job or latest_job.status == "failed") %}
         <div class="notice warning">Canvas may have created the shell, but the response was not received. Reconcile this manually before any retry.</div>
       {% endif %}
     </section>
   {% endfor %}
+  </div>
 {% endblock %}

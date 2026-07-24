@@ -121,6 +121,7 @@ def load_request(db: Session, request_id: int) -> MergeRequest | None:
         .where(MergeRequest.id == request_id)
         .options(
             selectinload(MergeRequest.groups).selectinload(MergeGroup.items),
+            selectinload(MergeRequest.groups).selectinload(MergeGroup.jobs),
             selectinload(MergeRequest.admin),
         )
     )

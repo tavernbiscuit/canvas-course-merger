@@ -5,29 +5,35 @@
     <div>
       <p class="eyebrow">Operations queue</p>
       <h1>Merge requests</h1>
+      <p class="page-summary">Review validation status, continue prepared work, or begin a verified faculty request.</p>
     </div>
-    <a class="button primary" href="/requests/new">New request</a>
+    <a class="button primary" href="/requests/new">Create merge request</a>
   </div>
-  <section class="card">
+  <section class="card table-card">
     {% if requests %}
-      <table>
-        <thead><tr><th>Reference</th><th>Faculty</th><th>Groups</th><th>Status</th><th>Created</th></tr></thead>
-        <tbody>
-          {% for item in requests %}
-            <tr>
-              <td><a href="/requests/{{ item.id }}">{{ item.external_reference }}</a></td>
-              <td>{{ item.faculty_identity }}</td>
-              <td>{{ item.groups|length }}</td>
-              <td><span class="status {{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
-              <td>{{ item.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-shell">
+        <table>
+          <caption class="sr-only">Canvas course merge requests</caption>
+          <thead><tr><th>Request reference</th><th>Faculty requester</th><th>Destinations</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody>
+            {% for item in requests %}
+              <tr class="clickable-row" data-row-href="/requests/{{ item.id }}">
+                <td><a class="table-primary-link" href="/requests/{{ item.id }}">{{ item.external_reference }}</a></td>
+                <td>{{ item.faculty_identity }}</td>
+                <td>{{ item.groups|length }}</td>
+                <td><span class="status {{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
+                <td><time datetime="{{ item.created_at.isoformat() }}">{{ item.created_at.strftime("%b %d, %Y") }}</time></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     {% else %}
       <div class="empty">
+        <div class="empty-mark" aria-hidden="true">+</div>
         <h2>No requests yet</h2>
         <p>Create the first intake after the faculty request has been verified.</p>
+        <a class="button primary" href="/requests/new">Create merge request</a>
       </div>
     {% endif %}
   </section>

@@ -37,6 +37,7 @@ from app.models import (
     OAuthCredential,
     utcnow,
 )
+from app.progress import load_request_progress
 from app.security import TokenCipher
 from app.workflow import ValidationService, create_request, load_request, set_destination_account
 
@@ -410,6 +411,7 @@ def request_detail(
     merge_request = load_request(db, request_id)
     if not merge_request:
         raise HTTPException(status_code=404)
+    accounts: list[dict[str, object]] = []
     try:
         accounts = account_choices(admin, db)
     except CanvasError as exc:
@@ -419,6 +421,18 @@ def request_detail(
         "request_detail.html",
         context(request, merge_request=merge_request, accounts=accounts),
     )
+
+
+@app.get("/api/requests/{request_id}/progress")
+def request_progress(
+    request_id: int,
+    _: AdminUser = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    progress = load_request_progress(db, request_id)
+    if progress is None:
+        raise HTTPException(status_code=404)
+    return progress
 
 
 @app.post("/requests/{request_id}/validate")

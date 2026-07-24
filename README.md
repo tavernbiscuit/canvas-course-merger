@@ -3,7 +3,8 @@
 Canvas Course Merger is an administrative web application that creates a new,
 blank Canvas course and cross-lists SIS-backed sections into it. It validates
 the current Canvas state before creating anything and records which Canvas
-administrator performed every operation.
+administrator performed every operation. Confirmed work runs through a durable
+background queue with live progress on the request page.
 
 Faculty do not use this application directly. They continue submitting merge
 requests through the existing institutional process. After that request has
@@ -58,7 +59,9 @@ The simulator starts with four SIS-backed sections:
 2026.fall.eng.102.45678
 ```
 
-Restarting the simulator restores this original state.
+Restarting the simulator restores this original Canvas state. It does not remove
+requests or audit history from `canvas_merger.db`; those application records are
+intentionally persistent across restarts.
 
 ### 3. Start the web application
 
@@ -105,7 +108,9 @@ Subaccount: Criminal Justice
 ```
 
 Type the generated course name into the confirmation field, queue the merge,
-and refresh the request page after the worker processes it.
+and watch the live tracker move through its safety check, destination creation,
+and section cross-list steps. The local simulator is fast, so some stages may
+complete between tracker updates.
 
 To try a cross-department and cross-subaccount merge, restart the simulator and
 use these two section IDs in one destination course:
@@ -131,6 +136,8 @@ represents one new blank and unpublished Canvas course:
    Canvas.
 4. If the source sections span subaccounts, select one destination subaccount
    on the review screen and revalidate.
+5. Review the generated destination payload, type its course name to confirm,
+   and monitor execution on the same page.
 
 The application generates an internal group key for structured entries; admins
 do not enter or manage that key.
@@ -151,6 +158,52 @@ Subaccounts are not maintained in the application. When a choice is required,
 the dropdown is populated from the Canvas accounts that the signed-in
 administrator can manage. `CANVAS_ALLOWED_ACCOUNT_IDS` may optionally restrict
 that list.
+
+## Destination course behavior
+
+Each destination group creates one blank, unpublished Canvas course:
+
+- It uses the verified Canvas enrollment term and selected destination
+  subaccount.
+- It receives no SIS course ID. The child sections retain their SIS IDs and
+  remain the enrollment-sync boundary.
+- Its course code is the generated department/course descriptor, such as
+  `CLJ 101`, `CLJ/ENG 101`, or `CLJ/ENG 101/102`.
+- A two-section course name lists both CRNs, such as
+  `CLJ/ENG 101 (12345, 23456)`.
+- A course with three or more sections uses `(All Sections)`.
+
+The application does not publish the destination, copy content, de-cross-list
+sections, or automatically undo successful section moves.
+
+## Live validation and execution progress
+
+**Recheck current Canvas state** is a read-only safety action. It contacts
+Canvas again to refresh:
+
+- The signed-in administrator's source and destination account permissions
+- Each SIS section's identity, source course, and current cross-list state
+- The common Canvas enrollment term
+- Destination subaccount eligibility
+- The generated destination name, course code, and confirmation snapshot
+
+It does not create a course or move a section. If Canvas state or generated
+destination metadata has changed, the prior confirmation is invalidated. The
+worker performs the same safety check once more immediately before course
+creation to close the gap between an administrator's review and execution.
+
+After confirmation, the request page displays a live execution tracker. It
+shows the destination's queue position, pre-execution safety check, blank-course
+creation, section-by-section cross-list progress, and final outcome. The browser
+polls a read-only application endpoint while work is active; those status reads
+come from the application database—PostgreSQL in production or SQLite in the
+local demo—and do not make extra Canvas API calls. Polling stops at a final
+state, and the page loads the final retry or reconciliation actions
+automatically.
+
+Execution is not tied to the browser tab. An administrator may leave the page
+and return to the request later; the separate worker continues processing the
+database-backed job.
 
 ## Optional bulk import
 
@@ -181,6 +234,29 @@ backward compatibility, but new files should omit it. Common source
 subaccounts are assigned automatically, and mixed-subaccount destinations are
 chosen once per destination on the review screen.
 
+## Frontend and UIC branding
+
+The interface follows the [UIC visual identity](https://brand.uic.edu/visual-identity/)
+and the visual language used by [Learning Technology
+Solutions](https://learning.uic.edu/). It uses the official Fire Engine Red,
+Navy Pier Blue, Steel Gray, and Expo White palette. The font stack prefers
+Theinhardt when it is available on an institution-managed device and otherwise
+falls back to Helvetica or Arial; the application does not download a
+proprietary font or third-party web font.
+
+The frontend is server-rendered with FastAPI and Jinja. A small, framework-free
+JavaScript file provides progressive enhancements such as repeatable destination
+and section fields, bulk-upload mode feedback, dismissible notices, and
+table-row navigation. It also polls the read-only progress endpoint while an
+execution is active. Core navigation, form submission, validation results, and
+confirmations continue to work without a client-side application runtime.
+
+This keeps local development and production deployment to one Python
+application with no Node.js build step. A React, Vue, or similar single-page
+frontend can still be introduced later if the application develops workflows
+that need substantial client-side state, but it is not required for the current
+administrative intake and review screens.
+
 ## Automated tests
 
 Automated tests do not require Canvas, PostgreSQL, or a public web server:
@@ -193,7 +269,8 @@ Automated tests do not require Canvas, PostgreSQL, or a public web server:
 
 Tests cover SIS parsing, destination naming, CSV/XLSX intake, blocked groups,
 mixed subaccounts, stale-state detection, partial failure, retries, ambiguous
-course creation, OAuth URL construction, and web-route rendering.
+course creation, queue positions, execution progress states, OAuth URL
+construction, and web-route rendering.
 
 ## Connecting to real Canvas
 
@@ -280,6 +357,10 @@ Canvas, and encryption configuration.
 - Back up PostgreSQL. It contains workflow state, audit events, and encrypted
   OAuth credentials.
 - Restrict `CANVAS_ALLOWED_ACCOUNT_IDS` if only certain subaccounts are in scope.
+- Monitor `/health/live` for process liveness and `/health/ready` for database
+  readiness.
+- Run the web process and execution worker as separately supervised services;
+  queued work does not execute without the worker.
 - Course creation is never automatically retried after an ambiguous response.
 - The application never publishes courses, copies content, de-cross-lists
   sections, or rolls back successful moves.

@@ -9,7 +9,7 @@ def test_public_home_and_health_endpoints():
     with TestClient(app) as client:
         home = client.get("/")
         assert home.status_code == 200
-        assert "Safe, auditable Canvas course merges" in home.text
+        assert "Canvas course merges, handled with confidence." in home.text
         assert client.get("/health/live").json() == {"status": "ok"}
         assert client.get("/health/ready").json() == {"status": "ready"}
 
@@ -19,3 +19,6 @@ def test_protected_page_redirects_to_canvas_login():
         response = client.get("/requests")
         assert response.status_code == 303
         assert response.headers["location"] == "/auth/login"
+        progress = client.get("/api/requests/1/progress")
+        assert progress.status_code == 303
+        assert progress.headers["location"] == "/auth/login"

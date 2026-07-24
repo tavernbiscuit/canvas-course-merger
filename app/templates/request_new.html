@@ -2,29 +2,43 @@
 {% block title %}New merge request{% endblock %}
 {% block content %}
   <div class="page-heading">
-    <div><p class="eyebrow">Verified faculty request</p><h1>New merge request</h1></div>
+    <div>
+      <p class="eyebrow">Verified faculty request</p>
+      <h1>New merge request</h1>
+      <p class="page-summary">Organize SIS-backed sections by the new Canvas destination course they should share.</p>
+    </div>
   </div>
   {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
   <form method="post" action="/requests" enctype="multipart/form-data" class="stack" data-intake-form>
     <input type="hidden" name="csrf" value="{{ csrf_token }}">
-    <section class="card form-grid">
-      <label>Faculty name or institutional email
-        <input name="faculty_identity" required maxlength="320" value="{{ faculty_identity or '' }}">
-      </label>
-      <label>External request or ticket reference
-        <input name="external_reference" required maxlength="255" value="{{ external_reference or '' }}">
-      </label>
+    <section class="card provenance-card">
+      <div class="card-heading">
+        <span class="step-number" aria-hidden="true">1</span>
+        <div>
+          <p class="eyebrow">Request provenance</p>
+          <h2>Who requested this merge?</h2>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label>Faculty name or institutional email
+          <input name="faculty_identity" required maxlength="320" value="{{ faculty_identity or '' }}" placeholder="faculty@uic.edu">
+        </label>
+        <label>External request or ticket reference
+          <input name="external_reference" required maxlength="255" value="{{ external_reference or '' }}" placeholder="Ticket or request number">
+        </label>
+      </div>
     </section>
 
     <fieldset class="intake-fieldset" data-structured-intake>
-      <div class="section-heading">
+      <div class="section-heading card-heading">
+        <span class="step-number" aria-hidden="true">2</span>
         <div>
           <p class="eyebrow">Canvas destinations</p>
           <h2>Courses to create</h2>
           <p>Each card represents one new blank Canvas destination course. Add every SIS-backed section that should be cross-listed into that destination.</p>
         </div>
       </div>
-      <div class="destination-groups" data-destination-groups data-next-group-index="{{ form_groups|length }}">
+      <div class="destination-groups" data-destination-groups data-next-group-index="{{ form_groups|length }}" aria-live="polite">
         {% for group in form_groups %}
           <article class="card destination-intake-card" data-destination-group data-group-index="{{ group.index }}">
             <div class="group-heading">
@@ -45,23 +59,27 @@
                 </div>
               {% endfor %}
             </div>
-            <button type="button" class="button" data-add-section>Add another section</button>
+            <button type="button" class="button compact" data-add-section>+ Add another section</button>
           </article>
         {% endfor %}
       </div>
-      <button type="button" class="button" data-add-group>Add another destination course</button>
+      <button type="button" class="button dashed" data-add-group>+ Add another destination course</button>
     </fieldset>
 
     <details class="card bulk-import">
-      <summary>Bulk import from CSV or XLSX</summary>
+      <summary>
+        <span>Bulk import from CSV or XLSX</span>
+        <span class="optional-label">Optional</span>
+      </summary>
       <p>Use this for requests containing many destination courses. Selecting a file replaces the destination-course cards above for this submission.</p>
       <label>CSV or XLSX file
         <input id="bulk-upload" type="file" name="upload" accept=".csv,.xlsx" data-bulk-upload>
       </label>
+      <p class="mode-message hint" data-intake-mode aria-live="polite"></p>
       <p class="hint"><a href="/intake-template.csv">Download the two-column CSV template</a>. Uploads are limited to 5 MB. Destination subaccounts are assigned automatically when all source sections match; mixed-subaccount destinations are selected after validation.</p>
     </details>
 
-    <div class="actions">
+    <div class="actions form-actions">
       <a class="button" href="/requests">Cancel</a>
       <button class="button primary">Save and validate</button>
     </div>
@@ -78,7 +96,7 @@
       </div>
       <input type="hidden" name="group_index">
       <div class="section-inputs" data-section-inputs></div>
-      <button type="button" class="button" data-add-section>Add another section</button>
+      <button type="button" class="button compact" data-add-section>+ Add another section</button>
     </article>
   </template>
 
