@@ -76,12 +76,12 @@ def get_settings() -> Settings:
         canvas_allowed_account_ids=_csv_ints(os.getenv("CANVAS_ALLOWED_ACCOUNT_IDS", "")),
         canvas_oauth_scopes=os.getenv(
             "CANVAS_OAUTH_SCOPES",
-            "url:GET|/api/v1/users/self/profile "
+            "url:GET|/api/v1/users/:user_id/profile "
             "url:GET|/api/v1/manageable_accounts "
             "url:GET|/api/v1/accounts/:id "
             "url:GET|/api/v1/accounts/:account_id/permissions "
             "url:GET|/api/v1/sections/:id "
-            "url:GET|/api/v1/courses/:course_id "
+            "url:GET|/api/v1/courses/:id "
             "url:POST|/api/v1/accounts/:account_id/courses "
             "url:POST|/api/v1/sections/:id/crosslist/:new_course_id",
         ),

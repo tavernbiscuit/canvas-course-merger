@@ -96,12 +96,12 @@ In the Canvas root account:
 Configure these exact scopes:
 
 ```text
-url:GET|/api/v1/users/self/profile
+url:GET|/api/v1/users/:user_id/profile
 url:GET|/api/v1/manageable_accounts
 url:GET|/api/v1/accounts/:id
 url:GET|/api/v1/accounts/:account_id/permissions
 url:GET|/api/v1/sections/:id
-url:GET|/api/v1/courses/:course_id
+url:GET|/api/v1/courses/:id
 url:POST|/api/v1/accounts/:account_id/courses
 url:POST|/api/v1/sections/:id/crosslist/:new_course_id
 ```
@@ -114,7 +114,7 @@ the application rejects users who cannot manage a configured Canvas account.
 The Developer Key redirect URI and `APP_BASE_URL` must agree exactly. Examples:
 
 ```text
-Local:  http://127.0.0.1:8000/auth/callback
+Local:  http://localhost:8000/auth/callback
 Hosted: https://canvas-merger.example.edu/auth/callback
 ```
 
@@ -142,7 +142,7 @@ Set the Canvas Test values in `.env`:
 
 ```text
 APP_ENV=development
-APP_BASE_URL=http://127.0.0.1:8000
+APP_BASE_URL=http://localhost:8000
 DATABASE_URL=sqlite:///./canvas_merger.db
 CANVAS_BASE_URL=https://your-test-canvas-domain
 CANVAS_CLIENT_ID=your-developer-key-id
@@ -167,7 +167,7 @@ Initialize the database and start the web app:
 .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000), sign in through Canvas
+Open [http://localhost:8000](http://localhost:8000), sign in through Canvas
 Test, and validate known test sections. Validation does not change Canvas.
 
 When you are ready to create courses and cross-list sections in Canvas Test,
