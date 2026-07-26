@@ -167,7 +167,6 @@ textarea {
   color: var(--paper);
 }
 
-.demo-badge,
 .optional-label {
   display: inline-flex;
   align-items: center;
@@ -178,11 +177,6 @@ textarea {
   letter-spacing: .07em;
   line-height: 1.2;
   text-transform: uppercase;
-}
-
-.demo-badge {
-  background: #fef8e0;
-  color: #5d4300;
 }
 
 .app-nav {

@@ -117,7 +117,6 @@ def context(request: Request, **values: object) -> dict[str, object]:
         "current_admin": getattr(request.state, "admin", None),
         "csrf_token": csrf_token(request),
         "flash": request.session.pop("_flash", None),
-        "local_canvas_demo": settings.local_canvas_demo,
         **values,
     }
 

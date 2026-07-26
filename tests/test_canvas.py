@@ -19,7 +19,7 @@ def settings() -> Settings:
         canvas_client_secret="client-secret",
         canvas_root_account_id=1,
         canvas_allowed_account_ids=frozenset(),
-        canvas_oauth_scopes="/auth/userinfo",
+        canvas_oauth_scopes="url:GET|/api/v1/users/self/profile",
         worker_poll_seconds=2,
         log_level="INFO",
     )
@@ -30,7 +30,7 @@ def test_oauth_url_contains_state_callback_and_scope():
     assert url.path == "/login/oauth2/auth"
     assert url.params["state"] == "state-value"
     assert url.params["redirect_uri"] == "https://merger.example.edu/auth/callback"
-    assert url.params["scope"] == "/auth/userinfo"
+    assert url.params["scope"] == "url:GET|/api/v1/users/self/profile"
 
 
 def test_create_course_is_unpublished_blank_and_has_no_sis_id():

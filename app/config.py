@@ -5,7 +5,6 @@ import hashlib
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -45,11 +44,6 @@ class Settings:
     def secure_cookies(self) -> bool:
         return self.app_base_url.lower().startswith("https://")
 
-    @property
-    def local_canvas_demo(self) -> bool:
-        hostname = urlparse(self.canvas_base_url).hostname
-        return self.app_env == "development" and hostname in {"127.0.0.1", "localhost"}
-
     def validate_for_server(self) -> None:
         if self.app_env != "development":
             if len(self.session_secret) < 32:
@@ -82,11 +76,10 @@ def get_settings() -> Settings:
         canvas_allowed_account_ids=_csv_ints(os.getenv("CANVAS_ALLOWED_ACCOUNT_IDS", "")),
         canvas_oauth_scopes=os.getenv(
             "CANVAS_OAUTH_SCOPES",
-            "/auth/userinfo url:GET|/api/v1/users/self/profile "
+            "url:GET|/api/v1/users/self/profile "
             "url:GET|/api/v1/manageable_accounts "
             "url:GET|/api/v1/accounts/:id "
             "url:GET|/api/v1/accounts/:account_id/permissions "
-            "url:GET|/api/v1/accounts/:account_id/sub_accounts "
             "url:GET|/api/v1/sections/:id "
             "url:GET|/api/v1/courses/:course_id "
             "url:POST|/api/v1/accounts/:account_id/courses "
