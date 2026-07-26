@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import pagination_controls %}
 {% block title %}Audit log{% endblock %}
 {% block content %}
   <div class="page-heading">
@@ -36,4 +37,5 @@
       </table>
     </div>
   </section>
+  {{ pagination_controls(pagination, "/audit") }}
 {% endblock %}

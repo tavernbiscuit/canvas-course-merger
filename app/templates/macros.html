@@ -1,0 +1,30 @@
+{% macro pagination_controls(pagination, base_url, search="") %}
+  {% if pagination.total %}
+    <div class="pagination-bar">
+      <p class="pagination-summary">{{ pagination.start }}–{{ pagination.end }} of {{ pagination.total }}</p>
+      {% if pagination.total_pages > 1 %}
+        <nav class="pagination-pages" aria-label="Pagination">
+          {% if pagination.page > 1 %}
+            <a href="{{ base_url }}?page={{ pagination.page - 1 }}{% if search %}&amp;q={{ search|urlencode }}{% endif %}" rel="prev">Previous</a>
+          {% else %}
+            <span class="pagination-direction" aria-disabled="true">Previous</span>
+          {% endif %}
+
+          {% for number in pagination.page_numbers %}
+            {% if number == pagination.page %}
+              <span class="current" aria-current="page">{{ number }}</span>
+            {% else %}
+              <a href="{{ base_url }}?page={{ number }}{% if search %}&amp;q={{ search|urlencode }}{% endif %}">{{ number }}</a>
+            {% endif %}
+          {% endfor %}
+
+          {% if pagination.page < pagination.total_pages %}
+            <a href="{{ base_url }}?page={{ pagination.page + 1 }}{% if search %}&amp;q={{ search|urlencode }}{% endif %}" rel="next">Next</a>
+          {% else %}
+            <span class="pagination-direction" aria-disabled="true">Next</span>
+          {% endif %}
+        </nav>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endmacro %}

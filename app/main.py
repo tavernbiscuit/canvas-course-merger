@@ -4,23 +4,25 @@ import json
 import logging
 import secrets
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from fastapi import (
     Depends,
     FastAPI,
     Form,
     HTTPException,
+    Query,
     Request,
     status,
 )
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, selectinload
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -44,6 +46,47 @@ from app.workflow import ValidationService, create_request, load_request, set_de
 
 logger = logging.getLogger("canvas_merger.web")
 BASE_DIR = Path(__file__).resolve().parent
+REQUESTS_PER_PAGE = 25
+AUDIT_EVENTS_PER_PAGE = 50
+
+
+@dataclass(frozen=True)
+class Pagination:
+    total: int
+    page: int
+    page_size: int
+
+    @classmethod
+    def from_total(cls, total: int, requested_page: int, page_size: int) -> Pagination:
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        return cls(
+            total=total,
+            page=min(requested_page, total_pages),
+            page_size=page_size,
+        )
+
+    @property
+    def total_pages(self) -> int:
+        return max(1, (self.total + self.page_size - 1) // self.page_size)
+
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
+
+    @property
+    def start(self) -> int:
+        return self.offset + 1 if self.total else 0
+
+    @property
+    def end(self) -> int:
+        return min(self.offset + self.page_size, self.total)
+
+    @property
+    def page_numbers(self) -> tuple[int, ...]:
+        start = max(1, self.page - 2)
+        end = min(self.total_pages, start + 4)
+        start = max(1, end - 4)
+        return tuple(range(start, end + 1))
 
 
 @asynccontextmanager
@@ -77,6 +120,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.filters["json"] = lambda value: json.dumps(value, indent=2, sort_keys=True)
+templates.env.filters["urlencode"] = quote_plus
 
 
 @app.middleware("http")
@@ -152,6 +196,39 @@ def account_choices(admin: AdminUser, db: Session) -> list[dict[str, object]]:
     with canvas_for_admin(admin, db) as canvas:
         account_map = ValidationService(settings, canvas).allowed_accounts()
     return sorted(account_map.values(), key=lambda item: str(item.get("name", "")))
+
+
+def request_reference_filter(search: str):
+    escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return MergeRequest.external_reference.ilike(f"%{escaped}%", escape="\\")
+
+
+def request_count_statement(search: str):
+    statement = select(func.count()).select_from(MergeRequest)
+    if search:
+        statement = statement.where(request_reference_filter(search))
+    return statement
+
+
+def request_list_statement(
+    search: str,
+    *,
+    offset: int = 0,
+    limit: int | None = None,
+):
+    statement = select(MergeRequest).options(
+        selectinload(MergeRequest.admin),
+        selectinload(MergeRequest.groups),
+    )
+    if search:
+        statement = statement.where(request_reference_filter(search))
+    statement = statement.order_by(
+        MergeRequest.created_at.desc(),
+        MergeRequest.id.desc(),
+    ).offset(offset)
+    if limit is not None:
+        statement = statement.limit(limit)
+    return statement
 
 
 def destination_group_values(form: object | None = None) -> list[dict[str, object]]:
@@ -320,18 +397,31 @@ def logout(
 @app.get("/requests", response_class=HTMLResponse)
 def request_list(
     request: Request,
+    search: Annotated[str, Query(alias="q", max_length=255)] = "",
+    page: Annotated[int, Query(ge=1)] = 1,
     admin: AdminUser = Depends(current_admin),
     db: Session = Depends(get_db),
 ):
+    search = search.strip()
+    total = int(db.scalar(request_count_statement(search)) or 0)
+    pagination = Pagination.from_total(total, page, REQUESTS_PER_PAGE)
     requests = db.scalars(
-        select(MergeRequest)
-        .options(
-            selectinload(MergeRequest.admin),
-            selectinload(MergeRequest.groups),
+        request_list_statement(
+            search,
+            offset=pagination.offset,
+            limit=pagination.page_size,
         )
-        .order_by(MergeRequest.created_at.desc())
     ).all()
-    return templates.TemplateResponse(request, "requests.html", context(request, requests=requests))
+    return templates.TemplateResponse(
+        request,
+        "requests.html",
+        context(
+            request,
+            requests=requests,
+            search=search,
+            pagination=pagination,
+        ),
+    )
 
 
 @app.get("/requests/new", response_class=HTMLResponse)
@@ -562,16 +652,27 @@ def retry_group(
 @app.get("/audit", response_class=HTMLResponse)
 def audit_log(
     request: Request,
+    page: Annotated[int, Query(ge=1)] = 1,
     _: AdminUser = Depends(current_admin),
     db: Session = Depends(get_db),
 ):
+    total = int(db.scalar(select(func.count()).select_from(AuditEvent)) or 0)
+    pagination = Pagination.from_total(total, page, AUDIT_EVENTS_PER_PAGE)
     events = db.scalars(
         select(AuditEvent)
         .options(
             selectinload(AuditEvent.admin),
             selectinload(AuditEvent.request),
         )
-        .order_by(AuditEvent.created_at.desc())
-        .limit(500)
+        .order_by(
+            AuditEvent.created_at.desc(),
+            AuditEvent.id.desc(),
+        )
+        .offset(pagination.offset)
+        .limit(pagination.page_size)
     ).all()
-    return templates.TemplateResponse(request, "audit.html", context(request, events=events))
+    return templates.TemplateResponse(
+        request,
+        "audit.html",
+        context(request, events=events, pagination=pagination),
+    )

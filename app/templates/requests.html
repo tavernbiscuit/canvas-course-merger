@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import pagination_controls %}
 {% block title %}Merge requests{% endblock %}
 {% block content %}
   <div class="page-heading">
@@ -9,6 +10,22 @@
     </div>
     <a class="button primary" href="/requests/new">Create merge request</a>
   </div>
+  <form class="request-search" method="get" action="/requests" role="search">
+    <label for="request-search">Search by ticket reference
+      <input
+        id="request-search"
+        type="search"
+        name="q"
+        maxlength="255"
+        value="{{ search }}"
+        placeholder="Enter a complete or partial ticket number"
+      >
+    </label>
+    <div class="request-search-actions">
+      <button class="button" type="submit">Search</button>
+      {% if search %}<a class="button quiet" href="/requests">Clear</a>{% endif %}
+    </div>
+  </form>
   <section class="card table-card">
     {% if requests %}
       <div class="table-shell">
@@ -34,6 +51,12 @@
           </tbody>
         </table>
       </div>
+    {% elif search %}
+      <div class="empty">
+        <h2>No matching requests</h2>
+        <p>No ticket reference contains “{{ search }}”.</p>
+        <a class="button quiet" href="/requests">Clear search</a>
+      </div>
     {% else %}
       <div class="empty">
         <div class="empty-mark" aria-hidden="true">+</div>
@@ -43,4 +66,5 @@
       </div>
     {% endif %}
   </section>
+  {{ pagination_controls(pagination, "/requests", search) }}
 {% endblock %}

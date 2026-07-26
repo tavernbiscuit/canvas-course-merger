@@ -21,6 +21,10 @@ request provenance, API attempts, and outcomes in an audit log.
    and queue the merge.
 6. Follow course creation and section-level progress on the request page.
 
+Previous requests can be found by entering a complete or partial ticket
+reference on the requests page. Request history is shown 25 entries at a time;
+the audit log is shown 50 events at a time.
+
 Source SIS IDs use:
 
 ```text
@@ -205,13 +209,14 @@ CANVAS_ROOT_ACCOUNT_ID=...
 ```
 
 Production mode requires HTTPS, PostgreSQL, unique session and encryption
-secrets, and real Canvas credentials. Run migrations, the web process, and the
-worker with the same environment:
+secrets, and real Canvas credentials.
 
 `CANVAS_ENVIRONMENT_LABEL` is displayed with the configured Canvas hostname on
 every page so administrators can confirm which Canvas environment they are
 using. Use `Canvas Test` during the pilot and update the label for any future
 production deployment.
+
+Run migrations, the web process, and the worker with the same environment:
 
 ```bash
 .venv/bin/alembic upgrade head
