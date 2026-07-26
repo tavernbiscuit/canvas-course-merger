@@ -134,9 +134,14 @@ Python 3.12 or newer is required:
 git clone https://github.com/tavernbiscuit/canvas_course_merger.git
 cd canvas_course_merger
 python3 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
 cp .env.example .env
 ```
+
+Virtual-environment activation applies only to the current terminal. Run
+`source .venv/bin/activate` again in each new terminal before using the
+application commands below.
 
 Set the Canvas Test values in `.env`:
 
@@ -163,8 +168,8 @@ python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 Initialize the database and start the web app:
 
 ```bash
-.venv/bin/alembic upgrade head
-.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+alembic upgrade head
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Open [http://localhost:8000](http://localhost:8000), sign in through Canvas
@@ -174,7 +179,9 @@ When you are ready to create courses and cross-list sections in Canvas Test,
 start the worker in a second terminal:
 
 ```bash
-.venv/bin/canvas-merger-worker
+cd canvas_course_merger
+source .venv/bin/activate
+canvas-merger-worker
 ```
 
 Without the worker, confirmed requests remain queued. Use disposable test
@@ -227,7 +234,8 @@ without requiring a Node.js build.
 Automated tests use isolated fakes and do not require Canvas or PostgreSQL:
 
 ```bash
-.venv/bin/pytest
-.venv/bin/ruff check app tests migrations
-.venv/bin/alembic check
+source .venv/bin/activate
+pytest
+ruff check app tests migrations
+alembic check
 ```
