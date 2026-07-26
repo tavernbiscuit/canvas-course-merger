@@ -136,6 +136,38 @@ textarea {
   text-transform: uppercase;
 }
 
+.header-context {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.environment-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .4rem .65rem;
+  border: 1px solid rgb(213 65 82 / 28%);
+  border-radius: 3px;
+  background: rgb(213 65 82 / 8%);
+  color: var(--uic-navy);
+  line-height: 1.1;
+}
+
+.environment-banner strong {
+  color: var(--uic-red);
+  font-size: .74rem;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.environment-banner span {
+  color: var(--uic-steel);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
 .product-bar {
   background: var(--uic-navy);
   color: var(--paper);
@@ -1002,6 +1034,21 @@ tbody tr:hover {
   font-weight: 800;
 }
 
+.identity-cell {
+  display: grid;
+  gap: .18rem;
+}
+
+.identity-cell strong {
+  color: var(--uic-steel);
+  font-size: .84rem;
+}
+
+.identity-cell span {
+  color: var(--muted);
+  font-size: .72rem;
+}
+
 code,
 pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1509,6 +1556,22 @@ dd {
 }
 
 @media (max-width: 480px) {
+  .institution-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .75rem;
+    padding-block: .9rem;
+  }
+
+  .header-context {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .environment-banner span {
+    display: none;
+  }
+
   .signature-copy strong {
     font-size: .88rem;
   }

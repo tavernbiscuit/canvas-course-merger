@@ -19,7 +19,15 @@
               <span>Learning Technology Solutions</span>
             </span>
           </div>
-          <span class="internal-tool">Administrative tool</span>
+          <div class="header-context">
+            {% if canvas_environment_label %}
+              <span class="environment-banner" aria-label="Connected to {{ canvas_environment_label }} at {{ canvas_hostname }}">
+                <strong>{{ canvas_environment_label }}</strong>
+                <span>{{ canvas_hostname }}</span>
+              </span>
+            {% endif %}
+            <span class="internal-tool">Administrative tool</span>
+          </div>
         </div>
       </div>
       <div class="product-bar">

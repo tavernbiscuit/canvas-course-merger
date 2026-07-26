@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlparse
 
 from fastapi import (
     Depends,
@@ -117,6 +118,9 @@ def context(request: Request, **values: object) -> dict[str, object]:
         "current_admin": getattr(request.state, "admin", None),
         "csrf_token": csrf_token(request),
         "flash": request.session.pop("_flash", None),
+        "canvas_environment_label": settings.canvas_environment_label,
+        "canvas_hostname": urlparse(settings.canvas_base_url).hostname
+        or settings.canvas_base_url,
         **values,
     }
 
@@ -321,7 +325,10 @@ def request_list(
 ):
     requests = db.scalars(
         select(MergeRequest)
-        .options(selectinload(MergeRequest.groups))
+        .options(
+            selectinload(MergeRequest.admin),
+            selectinload(MergeRequest.groups),
+        )
         .order_by(MergeRequest.created_at.desc())
     ).all()
     return templates.TemplateResponse(request, "requests.html", context(request, requests=requests))
@@ -370,7 +377,11 @@ async def request_create(
             rows=rows,
         )
         with canvas_for_admin(admin, db) as canvas:
-            ValidationService(settings, canvas).validate_request(db, merge_request)
+            ValidationService(settings, canvas).validate_request(
+                db,
+                merge_request,
+                admin_id=admin.id,
+            )
         flash(request, "Request saved and validated.")
         return RedirectResponse(f"/requests/{merge_request.id}", status_code=303)
     except (IntakeError, DomainValidationError, CanvasError, ValueError) as exc:
@@ -448,7 +459,11 @@ def request_validate(
         raise HTTPException(status_code=404)
     try:
         with canvas_for_admin(admin, db) as canvas:
-            ValidationService(settings, canvas).validate_request(db, merge_request)
+            ValidationService(settings, canvas).validate_request(
+                db,
+                merge_request,
+                admin_id=admin.id,
+            )
         flash(request, "Live Canvas validation completed.")
     except CanvasError as exc:
         db.rollback()
@@ -550,5 +565,13 @@ def audit_log(
     _: AdminUser = Depends(current_admin),
     db: Session = Depends(get_db),
 ):
-    events = db.scalars(select(AuditEvent).order_by(AuditEvent.created_at.desc()).limit(500)).all()
+    events = db.scalars(
+        select(AuditEvent)
+        .options(
+            selectinload(AuditEvent.admin),
+            selectinload(AuditEvent.request),
+        )
+        .order_by(AuditEvent.created_at.desc())
+        .limit(500)
+    ).all()
     return templates.TemplateResponse(request, "audit.html", context(request, events=events))

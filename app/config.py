@@ -35,6 +35,7 @@ class Settings:
     canvas_oauth_scopes: str
     worker_poll_seconds: float
     log_level: str
+    canvas_environment_label: str = ""
 
     @property
     def oauth_callback_url(self) -> str:
@@ -87,4 +88,5 @@ def get_settings() -> Settings:
         ),
         worker_poll_seconds=float(os.getenv("WORKER_POLL_SECONDS", "2")),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
+        canvas_environment_label=os.getenv("CANVAS_ENVIRONMENT_LABEL", "").strip(),
     )

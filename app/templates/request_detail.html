@@ -23,7 +23,7 @@
   {% endfor %}
   <div class="page-heading">
     <div>
-      <p class="breadcrumb"><a href="/requests">Merge requests</a><span aria-hidden="true">/</span> Request {{ merge_request.id }}</p>
+      <p class="breadcrumb"><a href="/requests">Merge requests</a><span aria-hidden="true">/</span> {{ merge_request.external_reference }}</p>
       <h1>{{ merge_request.external_reference }}</h1>
       <p class="page-summary">Faculty: {{ merge_request.faculty_identity }} · Entered by {{ merge_request.admin.name }}</p>
     </div>

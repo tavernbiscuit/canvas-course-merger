@@ -150,6 +150,7 @@ APP_ENV=development
 APP_BASE_URL=http://localhost:8000
 DATABASE_URL=sqlite:///./canvas_merger.db
 CANVAS_BASE_URL=https://your-test-canvas-domain
+CANVAS_ENVIRONMENT_LABEL=Canvas Test
 CANVAS_CLIENT_ID=your-developer-key-id
 CANVAS_CLIENT_SECRET=your-developer-key-secret
 CANVAS_ROOT_ACCOUNT_ID=your-institutional-root-account-id
@@ -197,6 +198,7 @@ APP_ENV=production
 APP_BASE_URL=https://canvas-merger.example.edu
 DATABASE_URL=postgresql+psycopg://...
 CANVAS_BASE_URL=https://your-canvas-domain
+CANVAS_ENVIRONMENT_LABEL=Canvas Test
 CANVAS_CLIENT_ID=...
 CANVAS_CLIENT_SECRET=...
 CANVAS_ROOT_ACCOUNT_ID=...
@@ -205,6 +207,11 @@ CANVAS_ROOT_ACCOUNT_ID=...
 Production mode requires HTTPS, PostgreSQL, unique session and encryption
 secrets, and real Canvas credentials. Run migrations, the web process, and the
 worker with the same environment:
+
+`CANVAS_ENVIRONMENT_LABEL` is displayed with the configured Canvas hostname on
+every page so administrators can confirm which Canvas environment they are
+using. Use `Canvas Test` during the pilot and update the label for any future
+production deployment.
 
 ```bash
 .venv/bin/alembic upgrade head

@@ -385,7 +385,14 @@ class ValidationService:
         db.flush()
         return not blocking_reasons
 
-    def validate_request(self, db: Session, request: MergeRequest) -> bool:
+    def validate_request(
+        self,
+        db: Session,
+        request: MergeRequest,
+        *,
+        admin_id: int | None = None,
+    ) -> bool:
+        actor_admin_id = admin_id if admin_id is not None else request.admin_id
         results = []
         for group in request.groups:
             if group.status in TERMINAL_GROUP_STATUSES | {
@@ -393,7 +400,7 @@ class ValidationService:
                 GroupStatus.EXECUTING.value,
             }:
                 continue
-            results.append(self.validate_group(db, group, admin_id=request.admin_id))
+            results.append(self.validate_group(db, group, admin_id=actor_admin_id))
         refresh_request_status(request)
         db.commit()
         return all(results) and request.status not in {

@@ -14,12 +14,18 @@
       <div class="table-shell">
         <table>
           <caption class="sr-only">Canvas course merge requests</caption>
-          <thead><tr><th>Request reference</th><th>Faculty requester</th><th>Destinations</th><th>Status</th><th>Created</th></tr></thead>
+          <thead><tr><th>Request reference</th><th>Faculty requester</th><th>Entered by</th><th>Destinations</th><th>Status</th><th>Created</th></tr></thead>
           <tbody>
             {% for item in requests %}
               <tr class="clickable-row" data-row-href="/requests/{{ item.id }}">
                 <td><a class="table-primary-link" href="/requests/{{ item.id }}">{{ item.external_reference }}</a></td>
                 <td>{{ item.faculty_identity }}</td>
+                <td>
+                  <span class="identity-cell">
+                    <strong>{{ item.admin.name }}</strong>
+                    {% if item.admin.email %}<span>{{ item.admin.email }}</span>{% endif %}
+                  </span>
+                </td>
                 <td>{{ item.groups|length }}</td>
                 <td><span class="status {{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
                 <td><time datetime="{{ item.created_at.isoformat() }}">{{ item.created_at.strftime("%b %d, %Y") }}</time></td>

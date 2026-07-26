@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from sqlalchemy import select
+
 from app.config import get_settings
 from app.intake import IntakeRow
-from app.models import AdminUser, GroupStatus, ItemStatus, RequestStatus
+from app.models import AdminUser, AuditEvent, GroupStatus, ItemStatus, RequestStatus
 from app.workflow import ValidationService, create_request, set_destination_account
 from tests.fakes import canvas_fixture
 
@@ -53,6 +55,37 @@ def test_validation_uses_operation_specific_granular_permissions(db):
         (10, ("manage_courses_admin", "manage_sections_edit", "read_sis")),
         (10, ("manage_courses_add", "manage_courses_admin")),
     ]
+
+
+def test_revalidation_is_attributed_to_the_acting_admin(db):
+    request_creator = admin(db)
+    acting_admin = AdminUser(
+        canvas_user_id=8,
+        name="Second Admin",
+        email="second-admin@example.edu",
+    )
+    db.add(acting_admin)
+    db.commit()
+    request = create_request(
+        db,
+        admin=request_creator,
+        faculty_identity="faculty@example.edu",
+        external_reference="TICKET-ATTRIBUTION",
+        rows=ROWS,
+    )
+
+    assert ValidationService(get_settings(), canvas_fixture()).validate_request(
+        db,
+        request,
+        admin_id=acting_admin.id,
+    )
+
+    validation_event = db.scalar(
+        select(AuditEvent).where(AuditEvent.event_type == "group.validated")
+    )
+    assert request.admin_id == request_creator.id
+    assert validation_event is not None
+    assert validation_event.admin_id == acting_admin.id
 
 
 def test_missing_granular_permission_uses_canvas_label(db):

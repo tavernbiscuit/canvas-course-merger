@@ -18,8 +18,17 @@
             <tr>
               <td><time datetime="{{ event.created_at.isoformat() }}">{{ event.created_at.strftime("%b %d, %Y %H:%M") }}</time></td>
               <td><code>{{ event.event_type }}</code></td>
-              <td>{{ event.admin_id or "system" }}</td>
-              <td>{% if event.request_id %}<a href="/requests/{{ event.request_id }}">{{ event.request_id }}</a>{% else %}—{% endif %}</td>
+              <td>
+                {% if event.admin %}
+                  <span class="identity-cell">
+                    <strong>{{ event.admin.name }}</strong>
+                    {% if event.admin.email %}<span>{{ event.admin.email }}</span>{% endif %}
+                  </span>
+                {% else %}
+                  system
+                {% endif %}
+              </td>
+              <td>{% if event.request %}<a href="/requests/{{ event.request_id }}">{{ event.request.external_reference }}</a>{% else %}—{% endif %}</td>
               <td><details><summary>View details</summary><pre>{{ event.details|json }}</pre></details></td>
             </tr>
           {% endfor %}
