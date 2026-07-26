@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, timedelta
 from typing import Any
@@ -149,12 +150,12 @@ class CanvasClient:
     def manageable_accounts(self) -> list[dict[str, Any]]:
         return self._get_all("/api/v1/manageable_accounts", params={"per_page": 100})
 
-    def account_permissions(self, account_id: int) -> dict[str, bool]:
-        params = [
-            ("permissions[]", "manage_courses"),
-            ("permissions[]", "manage_sections"),
-            ("permissions[]", "read_sis"),
-        ]
+    def account_permissions(
+        self,
+        account_id: int,
+        permissions: Sequence[str],
+    ) -> dict[str, bool]:
+        params = [("permissions[]", permission) for permission in permissions]
         return self._request(
             "GET", f"/api/v1/accounts/{account_id}/permissions", params=params
         ).data

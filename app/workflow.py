@@ -28,12 +28,33 @@ from app.models import (
     utcnow,
 )
 
-REQUIRED_PERMISSIONS = ("manage_courses", "manage_sections", "read_sis")
+SOURCE_REQUIRED_PERMISSIONS = (
+    "manage_courses_admin",
+    "manage_sections_edit",
+    "read_sis",
+)
+DESTINATION_REQUIRED_PERMISSIONS = (
+    "manage_courses_add",
+    "manage_courses_admin",
+)
+PERMISSION_LABELS = {
+    "manage_courses_add": "Courses - add",
+    "manage_courses_admin": "Courses - manage",
+    "manage_sections_edit": "Course Sections - edit",
+    "read_sis": "SIS Data - read",
+}
 TERMINAL_GROUP_STATUSES = {
     GroupStatus.COMPLETED.value,
     GroupStatus.COMPLETED_WITH_EXCEPTIONS.value,
     GroupStatus.CREATION_UNKNOWN.value,
 }
+
+
+def format_permissions(permissions: list[str]) -> str:
+    return ", ".join(
+        f"{PERMISSION_LABELS.get(permission, permission)} ({permission})"
+        for permission in permissions
+    )
 
 
 def refresh_request_status(request: MergeRequest) -> None:
@@ -258,14 +279,19 @@ class ValidationService:
             blocking_reasons.append("All sections must belong to one Canvas root account")
         for source_account_id in sorted(source_account_ids):
             try:
-                source_permissions = self.canvas.account_permissions(source_account_id)
+                source_permissions = self.canvas.account_permissions(
+                    source_account_id,
+                    SOURCE_REQUIRED_PERMISSIONS,
+                )
                 missing = [
-                    name for name in REQUIRED_PERMISSIONS if not source_permissions.get(name)
+                    name
+                    for name in SOURCE_REQUIRED_PERMISSIONS
+                    if not source_permissions.get(name)
                 ]
                 if missing:
                     blocking_reasons.append(
                         f"Missing permissions in source account {source_account_id}: "
-                        f"{', '.join(missing)}"
+                        f"{format_permissions(missing)}"
                     )
             except CanvasError as exc:
                 blocking_reasons.append(
@@ -293,11 +319,18 @@ class ValidationService:
                     blocking_reasons.append(
                         "The destination is outside the configured Canvas root account"
                     )
-                permissions = self.canvas.account_permissions(destination_account_id)  # type: ignore[arg-type]
-                missing = [name for name in REQUIRED_PERMISSIONS if not permissions.get(name)]
+                permissions = self.canvas.account_permissions(
+                    destination_account_id,  # type: ignore[arg-type]
+                    DESTINATION_REQUIRED_PERMISSIONS,
+                )
+                missing = [
+                    name
+                    for name in DESTINATION_REQUIRED_PERMISSIONS
+                    if not permissions.get(name)
+                ]
                 if missing:
                     blocking_reasons.append(
-                        f"Missing destination permissions: {', '.join(missing)}"
+                        f"Missing destination permissions: {format_permissions(missing)}"
                     )
                 group.destination_account_name = account.get("name")
             except CanvasError as exc:

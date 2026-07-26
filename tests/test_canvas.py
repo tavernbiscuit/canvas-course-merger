@@ -70,6 +70,29 @@ def test_crosslist_uses_sis_section_identifier():
     )
 
 
+def test_account_permissions_uses_current_granular_identifiers():
+    captured = {}
+    requested_permissions = (
+        "manage_courses_add",
+        "manage_courses_admin",
+        "manage_sections_edit",
+        "read_sis",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["permissions"] = request.url.params.get_list("permissions[]")
+        return httpx.Response(
+            200,
+            json={permission: True for permission in requested_permissions},
+        )
+
+    with CanvasClient(settings(), "token", transport=httpx.MockTransport(handler)) as client:
+        result = client.account_permissions(10, requested_permissions)
+
+    assert captured["permissions"] == list(requested_permissions)
+    assert result == {permission: True for permission in requested_permissions}
+
+
 def test_mutating_server_error_is_not_automatically_retried():
     calls = 0
 

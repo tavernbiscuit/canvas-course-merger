@@ -38,6 +38,43 @@ def test_validates_and_generates_destination(db):
     assert all(item.status == ItemStatus.ELIGIBLE.value for item in group.items)
 
 
+def test_validation_uses_operation_specific_granular_permissions(db):
+    request = create_request(
+        db,
+        admin=admin(db),
+        faculty_identity="faculty@example.edu",
+        external_reference="TICKET-PERMISSIONS",
+        rows=ROWS,
+    )
+    canvas = canvas_fixture()
+
+    assert ValidationService(get_settings(), canvas).validate_request(db, request)
+    assert canvas.permission_requests == [
+        (10, ("manage_courses_admin", "manage_sections_edit", "read_sis")),
+        (10, ("manage_courses_add", "manage_courses_admin")),
+    ]
+
+
+def test_missing_granular_permission_uses_canvas_label(db):
+    request = create_request(
+        db,
+        admin=admin(db),
+        faculty_identity="faculty@example.edu",
+        external_reference="TICKET-MISSING-PERMISSION",
+        rows=ROWS,
+    )
+    canvas = canvas_fixture()
+    canvas.permissions_by_account[10] = {"manage_sections_edit": False}
+
+    assert not ValidationService(get_settings(), canvas).validate_request(db, request)
+    assert request.groups[0].blocking_reason is not None
+    assert (
+        "Course Sections - edit (manage_sections_edit)"
+        in request.groups[0].blocking_reason
+    )
+    assert "manage_sections)" not in request.groups[0].blocking_reason
+
+
 def test_already_crosslisted_blocks_whole_group(db):
     request = create_request(
         db,

@@ -12,16 +12,19 @@ class FakeCanvas:
         sections: dict[str, dict[str, Any]] | None = None,
         courses: dict[int, dict[str, Any]] | None = None,
         accounts: dict[int, dict[str, Any]] | None = None,
+        permissions_by_account: dict[int, dict[str, bool]] | None = None,
         crosslist_failures: set[str] | None = None,
         ambiguous_create: bool = False,
     ):
         self.sections = sections or {}
         self.courses = courses or {}
         self.accounts = accounts or {}
+        self.permissions_by_account = permissions_by_account or {}
         self.crosslist_failures = crosslist_failures or set()
         self.ambiguous_create = ambiguous_create
         self.created: list[dict[str, Any]] = []
         self.crosslisted: list[tuple[str, int]] = []
+        self.permission_requests: list[tuple[int, tuple[str, ...]]] = []
 
     def __enter__(self):
         return self
@@ -32,8 +35,11 @@ class FakeCanvas:
     def manageable_accounts(self):
         return list(self.accounts.values())
 
-    def account_permissions(self, account_id: int):
-        return {"manage_courses": True, "manage_sections": True, "read_sis": True}
+    def account_permissions(self, account_id: int, permissions):
+        requested = tuple(permissions)
+        self.permission_requests.append((account_id, requested))
+        available = self.permissions_by_account.get(account_id, {})
+        return {permission: available.get(permission, True) for permission in requested}
 
     def get_account(self, account_id: int):
         return self.accounts[account_id]
