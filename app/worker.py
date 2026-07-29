@@ -5,12 +5,14 @@ import signal
 import time
 
 from app.config import get_settings
-from app.database import SessionLocal
+from app.database import SessionLocal, engine, validate_database_server
 from app.execution import ExecutionService, claim_next_job, recover_stale_jobs
 
 
 def main() -> None:
     settings = get_settings()
+    settings.validate_for_server()
+    validate_database_server(engine)
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",

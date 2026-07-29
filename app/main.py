@@ -28,7 +28,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.canvas import CanvasClient, CanvasError, OAuthService
 from app.config import Settings, get_settings
-from app.database import Base, engine, get_db
+from app.database import Base, engine, get_db, validate_database_server
 from app.domain import DomainValidationError
 from app.execution import queue_group
 from app.intake import IntakeError, parse_destination_groups, parse_upload
@@ -93,6 +93,7 @@ class Pagination:
 async def lifespan(_: FastAPI):
     settings = get_settings()
     settings.validate_for_server()
+    validate_database_server(engine)
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -163,8 +164,7 @@ def context(request: Request, **values: object) -> dict[str, object]:
         "csrf_token": csrf_token(request),
         "flash": request.session.pop("_flash", None),
         "canvas_environment_label": settings.canvas_environment_label,
-        "canvas_hostname": urlparse(settings.canvas_base_url).hostname
-        or settings.canvas_base_url,
+        "canvas_hostname": urlparse(settings.canvas_base_url).hostname or settings.canvas_base_url,
         **values,
     }
 

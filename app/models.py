@@ -7,7 +7,6 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Boolean,
-    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -16,7 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base, UTCDateTime, mysql_table_options
 
 
 def utcnow() -> datetime:
@@ -64,13 +63,14 @@ class JobStatus(StrEnum):
 
 class AdminUser(Base):
     __tablename__ = "admin_user"
+    __table_args__ = mysql_table_options()
 
     id: Mapped[int] = mapped_column(primary_key=True)
     canvas_user_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
     name: Mapped[str] = mapped_column(String(255))
     email: Mapped[str | None] = mapped_column(String(320))
-    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     credential: Mapped[OAuthCredential] = relationship(
         back_populates="admin", cascade="all, delete-orphan", uselist=False
@@ -80,30 +80,30 @@ class AdminUser(Base):
 
 class OAuthCredential(Base):
     __tablename__ = "oauth_credential"
+    __table_args__ = mysql_table_options()
 
     id: Mapped[int] = mapped_column(primary_key=True)
     admin_id: Mapped[int] = mapped_column(ForeignKey("admin_user.id"), unique=True)
     encrypted_access_token: Mapped[str] = mapped_column(Text)
     encrypted_refresh_token: Mapped[str | None] = mapped_column(Text)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     scopes: Mapped[str | None] = mapped_column(Text)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     admin: Mapped[AdminUser] = relationship(back_populates="credential")
 
 
 class MergeRequest(Base):
     __tablename__ = "merge_request"
+    __table_args__ = mysql_table_options()
 
     id: Mapped[int] = mapped_column(primary_key=True)
     admin_id: Mapped[int] = mapped_column(ForeignKey("admin_user.id"), index=True)
     faculty_identity: Mapped[str] = mapped_column(String(320))
     external_reference: Mapped[str] = mapped_column(String(255), index=True)
     status: Mapped[str] = mapped_column(String(40), default=RequestStatus.DRAFT.value)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
     admin: Mapped[AdminUser] = relationship(back_populates="requests")
     groups: Mapped[list[MergeGroup]] = relationship(
@@ -113,7 +113,10 @@ class MergeRequest(Base):
 
 class MergeGroup(Base):
     __tablename__ = "merge_group"
-    __table_args__ = (UniqueConstraint("request_id", "group_key"),)
+    __table_args__ = (
+        UniqueConstraint("request_id", "group_key"),
+        mysql_table_options(),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     request_id: Mapped[int] = mapped_column(ForeignKey("merge_request.id"), index=True)
@@ -128,12 +131,10 @@ class MergeGroup(Base):
     enrollment_term_name: Mapped[str | None] = mapped_column(String(255))
     validation_hash: Mapped[str | None] = mapped_column(String(64))
     confirmed_hash: Mapped[str | None] = mapped_column(String(64))
-    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     blocking_reason: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
     request: Mapped[MergeRequest] = relationship(back_populates="groups")
     items: Mapped[list[MergeItem]] = relationship(
@@ -144,7 +145,10 @@ class MergeGroup(Base):
 
 class MergeItem(Base):
     __tablename__ = "merge_item"
-    __table_args__ = (UniqueConstraint("group_id", "source_sis_id"),)
+    __table_args__ = (
+        UniqueConstraint("group_id", "source_sis_id"),
+        mysql_table_options(),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     group_id: Mapped[int] = mapped_column(ForeignKey("merge_group.id"), index=True)
@@ -162,7 +166,7 @@ class MergeItem(Base):
     source_account_name: Mapped[str | None] = mapped_column(String(255))
     nonxlist_course_id: Mapped[int | None] = mapped_column(Integer)
     snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON)
-    validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    validated_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
     group: Mapped[MergeGroup] = relationship(back_populates="items")
     attempts: Mapped[list[ExecutionAttempt]] = relationship(
@@ -172,6 +176,7 @@ class MergeItem(Base):
 
 class ExecutionJob(Base):
     __tablename__ = "execution_job"
+    __table_args__ = mysql_table_options()
 
     id: Mapped[int] = mapped_column(primary_key=True)
     group_id: Mapped[int] = mapped_column(ForeignKey("merge_group.id"), index=True)
@@ -179,16 +184,17 @@ class ExecutionJob(Base):
     status: Mapped[str] = mapped_column(String(40), default=JobStatus.PENDING.value, index=True)
     retry_failed_only: Mapped[bool] = mapped_column(Boolean, default=False)
     error: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    heartbeat_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
     group: Mapped[MergeGroup] = relationship(back_populates="jobs")
 
 
 class ExecutionAttempt(Base):
     __tablename__ = "execution_attempt"
+    __table_args__ = mysql_table_options()
 
     id: Mapped[int] = mapped_column(primary_key=True)
     item_id: Mapped[int | None] = mapped_column(ForeignKey("merge_item.id"), index=True)
@@ -198,14 +204,15 @@ class ExecutionAttempt(Base):
     http_status: Mapped[int | None] = mapped_column(Integer)
     canvas_request_id: Mapped[str | None] = mapped_column(String(255))
     detail: Mapped[str | None] = mapped_column(Text)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    finished_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     item: Mapped[MergeItem | None] = relationship(back_populates="attempts")
 
 
 class AuditEvent(Base):
     __tablename__ = "audit_event"
+    __table_args__ = mysql_table_options()
 
     id: Mapped[int] = mapped_column(primary_key=True)
     admin_id: Mapped[int | None] = mapped_column(ForeignKey("admin_user.id"), index=True)
@@ -213,7 +220,7 @@ class AuditEvent(Base):
     group_id: Mapped[int | None] = mapped_column(ForeignKey("merge_group.id"), index=True)
     event_type: Mapped[str] = mapped_column(String(80), index=True)
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     admin: Mapped[AdminUser | None] = relationship()
     request: Mapped[MergeRequest | None] = relationship()

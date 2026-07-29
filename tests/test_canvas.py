@@ -13,7 +13,7 @@ def settings() -> Settings:
         app_base_url="https://merger.example.edu",
         session_secret="x" * 32,
         token_encryption_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
-        database_url="postgresql+psycopg://unused",
+        database_url="mysql+pymysql://unused",
         canvas_base_url="https://canvas.example.edu",
         canvas_client_id="client-id",
         canvas_client_secret="client-secret",

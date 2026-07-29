@@ -97,7 +97,7 @@ The implementation is a deployment-neutral Python application consisting of:
 - FastAPI server-rendered administrative interface
 - Isolated Canvas OAuth/API adapter
 - SQLAlchemy workflow and audit model
-- PostgreSQL production database
+- MySQL 8.0+ production database
 - Database-backed background worker
 - Alembic migrations
 - CSV/XLSX in-memory processing
