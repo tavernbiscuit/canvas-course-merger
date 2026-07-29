@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from dotenv import load_dotenv
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 
 load_dotenv()
 
@@ -51,8 +53,14 @@ class Settings:
                 raise RuntimeError("APP_SESSION_SECRET must contain at least 32 characters")
             if not self.canvas_client_id or not self.canvas_client_secret:
                 raise RuntimeError("Canvas OAuth client credentials are required")
-            if self.database_url.startswith("sqlite"):
-                raise RuntimeError("Production deployments must use PostgreSQL")
+            try:
+                database_url = make_url(self.database_url)
+            except ArgumentError as exc:
+                raise RuntimeError("DATABASE_URL is not a valid SQLAlchemy database URL") from exc
+            if database_url.drivername != "mysql+pymysql":
+                raise RuntimeError(
+                    "Production deployments must use MySQL through the PyMySQL driver"
+                )
             if not self.app_base_url.startswith("https://"):
                 raise RuntimeError("APP_BASE_URL must use HTTPS outside development")
             if not self.canvas_base_url.startswith("https://"):

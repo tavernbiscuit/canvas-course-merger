@@ -139,13 +139,16 @@ git clone https://github.com/tavernbiscuit/canvas_course_merger.git
 cd canvas_course_merger
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
+python -m pip install --upgrade pip
+python -m pip install --constraint constraints.txt -e '.[dev]'
 cp .env.example .env
 ```
 
 Virtual-environment activation applies only to the current terminal. Run
 `source .venv/bin/activate` again in each new terminal before using the
-application commands below.
+application commands below. The constraints file pins the complete dependency
+set that has passed the project tests, avoiding repeated resolver backtracking
+while `pyproject.toml` retains the supported compatibility ranges.
 
 Set the Canvas Test values in `.env`:
 
@@ -195,12 +198,23 @@ SQLite is suitable only for this one-computer evaluation.
 
 ## Shared deployment
 
-For shared or sustained use, configure:
+For shared or sustained use, provision an empty MySQL 8.0-or-newer database.
+The application creates all tables with InnoDB, the `utf8mb4` character set,
+and the `utf8mb4_0900_ai_ci` collation. For example:
+
+```sql
+CREATE DATABASE canvas_merger
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_0900_ai_ci;
+```
+
+Configure the application with a MySQL account that can run the Alembic
+migrations and read and write the resulting tables:
 
 ```text
 APP_ENV=production
 APP_BASE_URL=https://canvas-merger.example.edu
-DATABASE_URL=postgresql+psycopg://...
+DATABASE_URL=mysql+pymysql://canvas_merger:password@mysql.example.edu:3306/canvas_merger?charset=utf8mb4
 CANVAS_BASE_URL=https://your-canvas-domain
 CANVAS_ENVIRONMENT_LABEL=Canvas Test
 CANVAS_CLIENT_ID=...
@@ -208,8 +222,15 @@ CANVAS_CLIENT_SECRET=...
 CANVAS_ROOT_ACCOUNT_ID=...
 ```
 
-Production mode requires HTTPS, PostgreSQL, unique session and encryption
-secrets, and real Canvas credentials.
+Production mode requires HTTPS, MySQL 8.0 or newer, unique session and
+encryption secrets, and real Canvas credentials. MariaDB is not supported
+because its locking and JSON behavior can differ from MySQL.
+
+Percent-encode special characters in the database username or password, and
+include any TLS connection parameters required by the MySQL provider. The web
+application and worker both verify the server version on startup. An existing
+PostgreSQL database is not converted automatically; export and validate its
+records separately before switching the application to the MySQL URL.
 
 `CANVAS_ENVIRONMENT_LABEL` is displayed with the configured Canvas hostname on
 every page so administrators can confirm which Canvas environment they are
@@ -230,7 +251,7 @@ with Podman or Docker.
 
 Operational requirements:
 
-- Back up PostgreSQL; it contains workflow state, audit records, and encrypted
+- Back up MySQL; it contains workflow state, audit records, and encrypted
   OAuth credentials.
 - Protect `.env` and the token-encryption key outside the repository.
 - Monitor `/health/live`, `/health/ready`, service state, disk capacity,
@@ -243,11 +264,21 @@ The UI is server-rendered with FastAPI and Jinja, with lightweight JavaScript
 for progressive enhancement and live progress polling. It follows UIC branding
 without requiring a Node.js build.
 
-Automated tests use isolated fakes and do not require Canvas or PostgreSQL:
+Automated tests use isolated fakes and do not require Canvas or MySQL:
 
 ```bash
 source .venv/bin/activate
 pytest
 ruff check app tests migrations
 alembic check
+```
+
+An optional live integration test verifies the MySQL schema, JSON and UTC
+timestamp round trips, and concurrent worker queue locking. Point
+`TEST_MYSQL_DATABASE_URL` only at an empty, disposable MySQL database; the test
+creates and drops the application tables:
+
+```bash
+TEST_MYSQL_DATABASE_URL='mysql+pymysql://user:password@127.0.0.1/test_canvas_merger?charset=utf8mb4' \
+  pytest tests/test_mysql.py
 ```

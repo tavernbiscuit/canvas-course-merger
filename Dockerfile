@@ -6,11 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN addgroup --system app && adduser --system --ingroup app app
 WORKDIR /app
 
-COPY pyproject.toml ./
+COPY pyproject.toml constraints.txt ./
 COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini ./
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --constraint constraints.txt .
 
 USER app
 EXPOSE 8000

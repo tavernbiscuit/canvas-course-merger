@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from importlib.util import find_spec
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -9,6 +11,16 @@ from starlette.requests import Request
 
 from app import main
 from app.models import AdminUser, AuditEvent, MergeRequest
+
+TEST_CLIENT_OPTIONS = (
+    {"backend_options": {"use_uvloop": True}}
+    if sys.version_info >= (3, 14) and find_spec("uvloop")
+    else {}
+)
+
+
+def web_client(**options):
+    return TestClient(main.app, **TEST_CLIENT_OPTIONS, **options)
 
 
 def template_request(path: str) -> Request:
@@ -31,7 +43,7 @@ def template_request(path: str) -> Request:
 
 
 def test_public_home_and_health_endpoints():
-    with TestClient(main.app) as client:
+    with web_client() as client:
         home = client.get("/")
         assert home.status_code == 200
         assert "Canvas course merges, handled with confidence." in home.text
@@ -40,7 +52,7 @@ def test_public_home_and_health_endpoints():
 
 
 def test_protected_page_redirects_to_canvas_login():
-    with TestClient(main.app, follow_redirects=False) as client:
+    with web_client(follow_redirects=False) as client:
         response = client.get("/requests")
         assert response.status_code == 303
         assert response.headers["location"] == "/auth/login"
@@ -60,7 +72,7 @@ def test_environment_banner_shows_label_and_canvas_hostname(monkeypatch):
         ),
     )
 
-    with TestClient(main.app) as client:
+    with web_client() as client:
         response = client.get("/")
 
     assert response.status_code == 200
@@ -203,7 +215,7 @@ def test_request_search_route_filters_rendered_results(db):
     main.app.dependency_overrides[main.get_db] = override_db
     main.app.dependency_overrides[main.current_admin] = lambda: admin
     try:
-        with TestClient(main.app) as client:
+        with web_client() as client:
             response = client.get("/requests", params={"q": "inc-123"})
     finally:
         main.app.dependency_overrides.clear()
@@ -255,7 +267,7 @@ def test_request_list_paginates_and_preserves_ticket_search(db):
     main.app.dependency_overrides[main.get_db] = override_db
     main.app.dependency_overrides[main.current_admin] = lambda: admin
     try:
-        with TestClient(main.app) as client:
+        with web_client() as client:
             first_page = client.get("/requests", params={"q": "INC"})
             second_page = client.get("/requests", params={"q": "INC", "page": 2})
     finally:
@@ -339,7 +351,7 @@ def test_audit_log_paginates_events(db):
     main.app.dependency_overrides[main.get_db] = override_db
     main.app.dependency_overrides[main.current_admin] = lambda: admin
     try:
-        with TestClient(main.app) as client:
+        with web_client() as client:
             response = client.get("/audit", params={"page": 2})
     finally:
         main.app.dependency_overrides.clear()
