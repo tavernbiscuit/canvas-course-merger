@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Canvas Course Merger{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
-    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+    <link rel="stylesheet" href="/course-merger/static/app.css">
+    <script src="/course-merger/static/app.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -33,17 +33,17 @@
       <div class="product-bar">
         <div class="header-inner product-inner">
           <div class="product-identity">
-            <a href="/requests" class="product-name">Canvas Course Merger</a>
+            <a href="/course-merger/requests" class="product-name">Canvas Course Merger</a>
           </div>
           {% if current_admin %}
             <nav class="app-nav" aria-label="Application">
-              <a href="/requests" {% if request.url.path.startswith("/requests") %}class="active" aria-current="page"{% endif %}>Requests</a>
-              <a href="/audit" {% if request.url.path.startswith("/audit") %}class="active" aria-current="page"{% endif %}>Audit log</a>
+              <a href="/course-merger/requests" {% if request.url.path.startswith("/requests") %}class="active" aria-current="page"{% endif %}>Requests</a>
+              <a href="/course-merger/audit" {% if request.url.path.startswith("/audit") %}class="active" aria-current="page"{% endif %}>Audit log</a>
               <span class="admin-chip">
                 <span class="admin-initial" aria-hidden="true">{{ current_admin.name[:1]|upper }}</span>
                 <span>{{ current_admin.name }}</span>
               </span>
-              <form method="post" action="/auth/logout" class="inline">
+              <form method="post" action="/course-merger/auth/logout" class="inline">
                 <input type="hidden" name="csrf" value="{{ csrf_token }}">
                 <button class="link-button">Sign out</button>
               </form>

@@ -265,7 +265,7 @@ def destination_group_values(form: object | None = None) -> list[dict[str, objec
 async def unauthorized(request: Request, _: HTTPException):
     if request.url.path.startswith("/auth/"):
         return PlainTextResponse("Unauthorized", status_code=401)
-    return RedirectResponse("/auth/login", status_code=303)
+    return RedirectResponse("/course-merger/auth/login", status_code=303)
 
 
 @app.exception_handler(404)
@@ -292,7 +292,7 @@ def ready(db: Session = Depends(get_db)) -> dict[str, str]:
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     if request.session.get("admin_id"):
-        return RedirectResponse("/requests", status_code=303)
+        return RedirectResponse("/course-merger/requests", status_code=303)
     return templates.TemplateResponse(request, "login.html", context(request))
 
 
@@ -369,7 +369,7 @@ def callback(
     request.session.clear()
     request.session["admin_id"] = admin.id
     flash(request, f"Signed in as {admin.name}.")
-    return RedirectResponse("/requests", status_code=303)
+    return RedirectResponse("/course-merger/requests", status_code=303)
 
 
 @app.post("/auth/logout")
@@ -391,7 +391,7 @@ def logout(
             db.delete(admin.credential)
             db.commit()
     request.session.clear()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/course-merger/", status_code=303)
 
 
 @app.get("/requests", response_class=HTMLResponse)
@@ -473,7 +473,10 @@ async def request_create(
                 admin_id=admin.id,
             )
         flash(request, "Request saved and validated.")
-        return RedirectResponse(f"/requests/{merge_request.id}", status_code=303)
+        return RedirectResponse(
+            f"/course-merger/requests/{merge_request.id}",
+            status_code=303,
+        )
     except (IntakeError, DomainValidationError, CanvasError, ValueError) as exc:
         db.rollback()
         return templates.TemplateResponse(
@@ -558,7 +561,7 @@ def request_validate(
     except CanvasError as exc:
         db.rollback()
         flash(request, str(exc), "error")
-    return RedirectResponse(f"/requests/{request_id}", status_code=303)
+    return RedirectResponse(f"/course-merger/requests/{request_id}", status_code=303)
 
 
 @app.post("/groups/{group_id}/destination")
@@ -592,7 +595,10 @@ def destination_select(
     except (CanvasError, ValueError) as exc:
         db.rollback()
         flash(request, str(exc), "error")
-    return RedirectResponse(f"/requests/{group.request_id}", status_code=303)
+    return RedirectResponse(
+        f"/course-merger/requests/{group.request_id}",
+        status_code=303,
+    )
 
 
 @app.post("/groups/{group_id}/execute")
@@ -621,7 +627,10 @@ def execute_group(
         except ValueError as exc:
             db.rollback()
             flash(request, str(exc), "error")
-    return RedirectResponse(f"/requests/{group.request_id}", status_code=303)
+    return RedirectResponse(
+        f"/course-merger/requests/{group.request_id}",
+        status_code=303,
+    )
 
 
 @app.post("/groups/{group_id}/retry")
@@ -646,7 +655,10 @@ def retry_group(
     except ValueError as exc:
         db.rollback()
         flash(request, str(exc), "error")
-    return RedirectResponse(f"/requests/{group.request_id}", status_code=303)
+    return RedirectResponse(
+        f"/course-merger/requests/{group.request_id}",
+        status_code=303,
+    )
 
 
 @app.get("/audit", response_class=HTMLResponse)

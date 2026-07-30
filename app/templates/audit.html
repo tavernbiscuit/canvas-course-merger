@@ -29,7 +29,7 @@
                   system
                 {% endif %}
               </td>
-              <td>{% if event.request %}<a href="/requests/{{ event.request_id }}">{{ event.request.external_reference }}</a>{% else %}—{% endif %}</td>
+              <td>{% if event.request %}<a href="/course-merger/requests/{{ event.request_id }}">{{ event.request.external_reference }}</a>{% else %}—{% endif %}</td>
               <td><details><summary>View details</summary><pre>{{ event.details|json }}</pre></details></td>
             </tr>
           {% endfor %}
@@ -37,5 +37,5 @@
       </table>
     </div>
   </section>
-  {{ pagination_controls(pagination, "/audit") }}
+  {{ pagination_controls(pagination, "/course-merger/audit") }}
 {% endblock %}

@@ -8,9 +8,9 @@
       <h1>Merge requests</h1>
       <p class="page-summary">Review validation status, continue prepared work, or begin a verified faculty request.</p>
     </div>
-    <a class="button primary" href="/requests/new">Create merge request</a>
+    <a class="button primary" href="/course-merger/requests/new">Create merge request</a>
   </div>
-  <form class="request-search" method="get" action="/requests" role="search">
+  <form class="request-search" method="get" action="/course-merger/requests" role="search">
     <label for="request-search">Search by ticket reference
       <input
         id="request-search"
@@ -23,7 +23,7 @@
     </label>
     <div class="request-search-actions">
       <button class="button" type="submit">Search</button>
-      {% if search %}<a class="button quiet" href="/requests">Clear</a>{% endif %}
+      {% if search %}<a class="button quiet" href="/course-merger/requests">Clear</a>{% endif %}
     </div>
   </form>
   <section class="card table-card">
@@ -34,8 +34,8 @@
           <thead><tr><th>Request reference</th><th>Faculty requester</th><th>Entered by</th><th>Destinations</th><th>Status</th><th>Created</th></tr></thead>
           <tbody>
             {% for item in requests %}
-              <tr class="clickable-row" data-row-href="/requests/{{ item.id }}">
-                <td><a class="table-primary-link" href="/requests/{{ item.id }}">{{ item.external_reference }}</a></td>
+              <tr class="clickable-row" data-row-href="/course-merger/requests/{{ item.id }}">
+                <td><a class="table-primary-link" href="/course-merger/requests/{{ item.id }}">{{ item.external_reference }}</a></td>
                 <td>{{ item.faculty_identity }}</td>
                 <td>
                   <span class="identity-cell">
@@ -55,16 +55,16 @@
       <div class="empty">
         <h2>No matching requests</h2>
         <p>No ticket reference contains “{{ search }}”.</p>
-        <a class="button quiet" href="/requests">Clear search</a>
+        <a class="button quiet" href="/course-merger/requests">Clear search</a>
       </div>
     {% else %}
       <div class="empty">
         <div class="empty-mark" aria-hidden="true">+</div>
         <h2>No requests yet</h2>
         <p>Create the first intake after the faculty request has been verified.</p>
-        <a class="button primary" href="/requests/new">Create merge request</a>
+        <a class="button primary" href="/course-merger/requests/new">Create merge request</a>
       </div>
     {% endif %}
   </section>
-  {{ pagination_controls(pagination, "/requests", search) }}
+  {{ pagination_controls(pagination, "/course-merger/requests", search) }}
 {% endblock %}

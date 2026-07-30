@@ -55,10 +55,10 @@ def test_protected_page_redirects_to_canvas_login():
     with web_client(follow_redirects=False) as client:
         response = client.get("/requests")
         assert response.status_code == 303
-        assert response.headers["location"] == "/auth/login"
+        assert response.headers["location"] == "/course-merger/auth/login"
         progress = client.get("/api/requests/1/progress")
         assert progress.status_code == 303
-        assert progress.headers["location"] == "/auth/login"
+        assert progress.headers["location"] == "/course-merger/auth/login"
 
 
 def test_environment_banner_shows_label_and_canvas_hostname(monkeypatch):
@@ -187,7 +187,7 @@ def test_request_search_renders_query_clear_action_and_no_results_state():
     assert 'value="INC-123"' in html
     assert "No matching requests" in html
     assert "Clear search" in html
-    assert 'href="/requests">Clear</a>' in html
+    assert 'href="/course-merger/requests">Clear</a>' in html
 
 
 def test_request_search_route_filters_rendered_results(db):
@@ -315,8 +315,8 @@ def test_audit_log_displays_ticket_reference_instead_of_internal_id():
     )
     html = response.body.decode()
 
-    assert 'href="/requests/6">TICKET-12345</a>' in html
-    assert 'href="/requests/6">6</a>' not in html
+    assert 'href="/course-merger/requests/6">TICKET-12345</a>' in html
+    assert 'href="/course-merger/requests/6">6</a>' not in html
     assert "Admin User" in html
     assert "admin-user@example.edu" in html
 

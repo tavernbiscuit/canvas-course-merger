@@ -9,7 +9,7 @@
     </div>
   </div>
   {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
-  <form method="post" action="/requests" enctype="multipart/form-data" class="stack" data-intake-form>
+  <form method="post" action="/course-merger/requests" enctype="multipart/form-data" class="stack" data-intake-form>
     <input type="hidden" name="csrf" value="{{ csrf_token }}">
     <section class="card provenance-card">
       <div class="card-heading">
@@ -76,11 +76,11 @@
         <input id="bulk-upload" type="file" name="upload" accept=".csv,.xlsx" data-bulk-upload>
       </label>
       <p class="mode-message hint" data-intake-mode aria-live="polite"></p>
-      <p class="hint"><a href="/intake-template.csv">Download the two-column CSV template</a>. Uploads are limited to 5 MB. Destination subaccounts are assigned automatically when all source sections match; mixed-subaccount destinations are selected after validation.</p>
+      <p class="hint"><a href="/course-merger/intake-template.csv">Download the two-column CSV template</a>. Uploads are limited to 5 MB. Destination subaccounts are assigned automatically when all source sections match; mixed-subaccount destinations are selected after validation.</p>
     </details>
 
     <div class="actions form-actions">
-      <a class="button" href="/requests">Cancel</a>
+      <a class="button" href="/course-merger/requests">Cancel</a>
       <button class="button primary">Save and validate</button>
     </div>
   </form>
